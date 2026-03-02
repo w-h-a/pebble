@@ -1,0 +1,9 @@
+# Binaries
+bin
+*.exe
+
+# Pebble data
+.pebble/
+
+# Go
+*.test
