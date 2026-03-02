@@ -36,20 +36,12 @@ graph TD
     DB[(pebble.db)]
   end
 
-  subgraph IO ["I/O"]
-      JSONL[JSONL Import/Export]
-      JSON[--json formatter]
-  end
-
   CMD --> SVC
-  CMD --> JSONL
-  CMD --> JSON
   SVC --> Domain
   SVC --> IDGEN
   SVC --> REPO_IF
   REPO_IF -.-> SQLITE
   SQLITE --> DB
-  JSONL --> REPO_IF
 ```
 
 ## Usage
