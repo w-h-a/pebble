@@ -16,18 +16,24 @@ graph TD
       CMD[Command Layer]
   end
 
+  subgraph Service ["Service Layer"]
+    SVC[Service]
+  end
+
   subgraph Domain ["Domain Layer"]
-      SVC[Service]
       ISSUE[Issue]
       DEP[Dependency]
       COMMENT[Comment]
-      IDGEN[ID Generator]
-      REPO_IF[Repository Interface]
   end
 
-  subgraph Storage ["Storage Layer"]
-      SQLITE[SQLite via modernc.org/sqlite]
-      DB[(pebble.db)]
+  subgraph Client ["Client Layer"]
+    REPO_IF[Repo Interface]
+  end
+
+  subgraph Infra ["Infrastructure"]
+    IDGEN[ID Generator]
+    SQLITE[SQLite via modernc.org/sqlite]
+    DB[(pebble.db)]
   end
 
   subgraph IO ["I/O"]
@@ -38,9 +44,7 @@ graph TD
   CMD --> SVC
   CMD --> JSONL
   CMD --> JSON
-  SVC --> ISSUE
-  SVC --> DEP
-  SVC --> COMMENT
+  SVC --> Domain
   SVC --> IDGEN
   SVC --> REPO_IF
   REPO_IF -.-> SQLITE
