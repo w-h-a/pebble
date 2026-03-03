@@ -22,4 +22,19 @@ jobs:
       - name: Install dependencies
         run: go mod tidy
       - name: Run Unit Tests
-        run: make unit-test 
+        run: make unit-test
+
+  integration-test:                                                                                                                                                               
+      name: Integration Tests                                                                                                                                                       
+      runs-on: ubuntu-latest                                                                                                                                                        
+      steps:                                                                                                                                                                        
+        - name: Set up Go                                                                                                                                                           
+          uses: actions/setup-go@v5
+          with:
+            go-version: '1.24'
+        - name: Check out code
+          uses: actions/checkout@v4
+        - name: Install dependencies
+          run: go mod tidy
+        - name: Run Integration Tests
+          run: make integration-test
