@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/w-h-a/pebble/internal/client/repo"
 	"github.com/w-h-a/pebble/internal/domain"
@@ -323,6 +324,35 @@ func (r *sqliteRepo) UpdateIssue(ctx context.Context, issue *domain.Issue) error
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("failed to commit issue update: %w", err)
+	}
+
+	return nil
+}
+
+func (r *sqliteRepo) CloseIssue(ctx context.Context, id string, now time.Time) error {
+	_, err := r.db.ExecContext(
+		ctx,
+		"UPDATE issues SET status = 'closed', closed_at = ?, updated_at = ? WHERE id = ?",
+		now,
+		now,
+		id,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to close issue: %w", err)
+	}
+
+	return nil
+}
+
+func (r *sqliteRepo) ReopenIssue(ctx context.Context, id string, now time.Time) error {
+	_, err := r.db.ExecContext(
+		ctx,
+		"UPDATE issues SET status = 'open', closed_at = NULL, updated_at = ? WHERE id = ?",
+		now,
+		id,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to reopen issue: %w", err)
 	}
 
 	return nil

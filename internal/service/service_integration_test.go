@@ -312,6 +312,115 @@ func TestUpdateIssue_UnchangedFieldsPreserved(t *testing.T) {
 	assert.Equal(t, 1, *updated.Priority)
 }
 
+func TestCloseIssue(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	issue := &domain.Issue{Title: "To close", Labels: []string{"bug"}}
+	id, err := svc.CreateIssue(ctx, issue)
+	require.NoError(t, err)
+
+	// Act
+	closed, changed, err := svc.CloseIssue(ctx, id)
+	require.NoError(t, err)
+
+	// Assert
+	assert.True(t, changed)
+	assert.Equal(t, domain.StatusClosed, closed.Status)
+	assert.NotNil(t, closed.ClosedAt)
+	assert.Equal(t, []string{"bug"}, closed.Labels)
+
+	// Assert: persisted
+	got, err := svc.GetIssue(ctx, id)
+	assert.NoError(t, err)
+	assert.Equal(t, domain.StatusClosed, got.Status)
+	assert.NotNil(t, got.ClosedAt)
+}
+
+func TestCloseIssue_AlreadyClosed(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	issue := &domain.Issue{Title: "Already closed"}
+	id, err := svc.CreateIssue(ctx, issue)
+	require.NoError(t, err)
+
+	_, _, err = svc.CloseIssue(ctx, id)
+	require.NoError(t, err)
+
+	// Act: close again
+	got, changed, err := svc.CloseIssue(ctx, id)
+	require.NoError(t, err)
+
+	// Assert: idempotent
+	assert.False(t, changed)
+	assert.Equal(t, domain.StatusClosed, got.Status)
+}
+
+func TestReopenIssue(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	issue := &domain.Issue{Title: "To reopen"}
+	id, err := svc.CreateIssue(ctx, issue)
+	require.NoError(t, err)
+
+	_, _, err = svc.CloseIssue(ctx, id)
+	require.NoError(t, err)
+
+	// Act
+	reopened, changed, err := svc.ReopenIssue(ctx, id)
+	require.NoError(t, err)
+
+	// Assert
+	assert.True(t, changed)
+	assert.Equal(t, domain.StatusOpen, reopened.Status)
+	assert.Nil(t, reopened.ClosedAt)
+
+	// Assert: persisted
+	got, err := svc.GetIssue(ctx, id)
+	assert.NoError(t, err)
+	assert.Equal(t, domain.StatusOpen, got.Status)
+	assert.Nil(t, got.ClosedAt)
+}
+
+func TestReopenIssue_AlreadyOpen(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	issue := &domain.Issue{Title: "Already open"}
+	id, err := svc.CreateIssue(ctx, issue)
+	require.NoError(t, err)
+
+	// Act: reopen without closing first
+	got, changed, err := svc.ReopenIssue(ctx, id)
+	require.NoError(t, err)
+
+	// Assert: idempotent
+	assert.False(t, changed)
+	assert.Equal(t, domain.StatusOpen, got.Status)
+}
+
 func setupService(t *testing.T) *Service {
 	t.Helper()
 

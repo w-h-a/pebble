@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"time"
 
 	"github.com/w-h-a/pebble/internal/domain"
 )
@@ -16,5 +17,7 @@ type Repo interface {
 	ResolveID(ctx context.Context, partial string) (string, error)
 	ListIssues(ctx context.Context, filter domain.ListFilter) ([]domain.Issue, error)
 	UpdateIssue(ctx context.Context, issue *domain.Issue) error
+	CloseIssue(ctx context.Context, id string, now time.Time) error
+	ReopenIssue(ctx context.Context, id string, now time.Time) error
 	Close() error
 }

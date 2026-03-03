@@ -134,6 +134,8 @@ func (s *Service) ListIssues(ctx context.Context, filter domain.ListFilter) ([]d
 }
 
 func (s *Service) UpdateIssue(ctx context.Context, idOrPrefix string, update domain.IssueUpdate) (*domain.Issue, error) {
+	slog.Debug("updating issue", "id_or_prefix", idOrPrefix)
+
 	fullID, err := s.repo.ResolveID(ctx, idOrPrefix)
 	if err != nil {
 		return nil, err
@@ -222,6 +224,108 @@ func (s *Service) UpdateIssue(ctx context.Context, idOrPrefix string, update dom
 	slog.Debug("issue updated", "id", fullID, "fields_changed", changed)
 
 	return issue, nil
+}
+
+func (s *Service) CloseIssue(ctx context.Context, idOrPrefix string) (*domain.Issue, bool, error) {
+	slog.Debug("closing issue", "id_or_prefix", idOrPrefix)
+
+	fullID, err := s.repo.ResolveID(ctx, idOrPrefix)
+	if err != nil {
+		return nil, false, err
+	}
+
+	if fullID != idOrPrefix {
+		slog.Debug("prefix resolved", "input", idOrPrefix, "resolved", fullID)
+	}
+
+	issue, err := s.repo.GetIssue(ctx, fullID)
+	if err != nil {
+		return nil, false, err
+	}
+
+	changed := issue.Status != domain.StatusClosed
+	if changed {
+		now := time.Now()
+		issue.Status = domain.StatusClosed
+		issue.ClosedAt = &now
+		issue.UpdatedAt = now
+
+		if err := s.repo.CloseIssue(ctx, fullID, now); err != nil {
+			return nil, false, fmt.Errorf("failed to close issue: %w", err)
+		}
+
+		slog.Debug("issue closed", "id", fullID)
+	} else {
+		slog.Debug("issue already closed", "id", fullID)
+	}
+
+	issue.Labels, err = s.repo.GetLabels(ctx, fullID)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to get labels: %w", err)
+	}
+
+	issue.Dependencies, err = s.repo.GetDependencies(ctx, fullID)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to get dependencies: %w", err)
+	}
+
+	issue.Comments, err = s.repo.GetComments(ctx, fullID)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to get comments: %w", err)
+	}
+
+	return issue, changed, nil
+}
+
+func (s *Service) ReopenIssue(ctx context.Context, idOrPrefix string) (*domain.Issue, bool, error) {
+	slog.Debug("reopening issue", "id_or_prefix", idOrPrefix)
+
+	fullID, err := s.repo.ResolveID(ctx, idOrPrefix)
+	if err != nil {
+		return nil, false, err
+	}
+
+	if fullID != idOrPrefix {
+		slog.Debug("prefix resolved", "input", idOrPrefix, "resolved", fullID)
+	}
+
+	issue, err := s.repo.GetIssue(ctx, fullID)
+	if err != nil {
+		return nil, false, err
+	}
+
+	changed := issue.Status == domain.StatusClosed
+	if changed {
+		now := time.Now()
+		issue.Status = domain.StatusOpen
+		issue.ClosedAt = nil
+		issue.UpdatedAt = now
+
+		if err := s.repo.ReopenIssue(ctx, fullID, now); err != nil {
+			return nil, false, fmt.Errorf("failed to reopen issue: %w", err)
+		}
+
+		slog.Debug("issue reopened", "id", fullID)
+	} else {
+		slog.Debug("issue already open", "id", fullID)
+	}
+
+	issue.Labels, err = s.repo.GetLabels(ctx, fullID)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to get labels: %w", err)
+	}
+
+	issue.Dependencies, err = s.repo.GetDependencies(ctx, fullID)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to get dependencies: %w", err)
+	}
+
+	issue.Comments, err = s.repo.GetComments(ctx, fullID)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to get comments: %w", err)
+	}
+
+	return issue, changed, nil
 }
 
 type Service struct {
