@@ -13,17 +13,11 @@ Pebble keeps the features of beads that I use everyday and drops everything else
 ```mermaid
 graph TD
   subgraph CLI ["pb CLI (cobra)"]
-      CMD[Command Layer]
+    CMD[Command Layer]
   end
 
   subgraph Service ["Service Layer"]
     SVC[Service]
-  end
-
-  subgraph Domain ["Domain Layer"]
-      ISSUE[Issue]
-      DEP[Dependency]
-      COMMENT[Comment]
   end
 
   subgraph Client ["Client Layer"]
@@ -31,14 +25,18 @@ graph TD
   end
 
   subgraph Infra ["Infrastructure"]
-    IDGEN[ID Generator]
     SQLITE[SQLite via modernc.org/sqlite]
     DB[(pebble.db)]
   end
 
+  subgraph Domain ["Domain Layer"]
+    ISSUE[Issue]
+    DEP[Dependency]
+    COMMENT[Comment]
+  end
+
   CMD --> SVC
   SVC --> Domain
-  SVC --> IDGEN
   SVC --> REPO_IF
   REPO_IF -.-> SQLITE
   SQLITE --> DB
