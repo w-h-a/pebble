@@ -9,7 +9,6 @@ import (
 type Repo interface {
 	CreateIssue(ctx context.Context, issue *domain.Issue) error
 	IssueExists(ctx context.Context, id string) (bool, error)
-	AddLabels(ctx context.Context, issueID string, labels []string) error
 	GetIssue(ctx context.Context, id string) (*domain.Issue, error)
 	GetLabels(ctx context.Context, issueID string) ([]string, error)
 	GetDependencies(ctx context.Context, issueID string) ([]domain.Dependency, error)
@@ -17,6 +16,5 @@ type Repo interface {
 	ResolveID(ctx context.Context, partial string) (string, error)
 	ListIssues(ctx context.Context, filter domain.ListFilter) ([]domain.Issue, error)
 	UpdateIssue(ctx context.Context, issue *domain.Issue) error
-	ReplaceLabels(ctx context.Context, issueID string, labels []string) error
 	Close() error
 }

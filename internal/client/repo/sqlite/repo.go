@@ -17,7 +17,13 @@ type sqliteRepo struct {
 }
 
 func (r *sqliteRepo) CreateIssue(ctx context.Context, issue *domain.Issue) error {
-	_, err := r.db.ExecContext(
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(
 		ctx,
 		`INSERT INTO issues (id, title, description, status, type, priority, assignee, estimate_mins, defer_until, due_at, created_at, updated_at, parent_id)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -39,6 +45,17 @@ func (r *sqliteRepo) CreateIssue(ctx context.Context, issue *domain.Issue) error
 		return fmt.Errorf("failed to insert issue: %w", err)
 	}
 
+	for _, label := range issue.Labels {
+		_, err := tx.ExecContext(ctx, "INSERT OR IGNORE INTO labels (issue_id, label) VALUES (?, ?)", issue.ID, label)
+		if err != nil {
+			return fmt.Errorf("failed to insert label %q: %w", label, err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit issue: %w", err)
+	}
+
 	return nil
 }
 
@@ -51,22 +68,6 @@ func (r *sqliteRepo) IssueExists(ctx context.Context, id string) (bool, error) {
 	}
 
 	return exists, nil
-}
-
-func (r *sqliteRepo) AddLabels(ctx context.Context, issueID string, labels []string) error {
-	for _, label := range labels {
-		_, err := r.db.ExecContext(
-			ctx,
-			"INSERT OR IGNORE INTO labels (issue_id, label) VALUES (?, ?)",
-			issueID,
-			label,
-		)
-		if err != nil {
-			return fmt.Errorf("failed to insert label %q: %w", label, err)
-		}
-	}
-
-	return nil
 }
 
 func (r *sqliteRepo) GetIssue(ctx context.Context, id string) (*domain.Issue, error) {
@@ -281,7 +282,13 @@ func (r *sqliteRepo) ListIssues(ctx context.Context, filter domain.ListFilter) (
 }
 
 func (r *sqliteRepo) UpdateIssue(ctx context.Context, issue *domain.Issue) error {
-	_, err := r.db.ExecContext(
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(
 		ctx,
 		`UPDATE issues SET title = ?, description = ?, status = ?, type = ?, priority = ?, assignee = ?, estimate_mins = ?, defer_until = ?, due_at = ?, updated_at = ?, closed_at = ?, parent_id = ? WHERE id = ?`,
 		issue.Title,
@@ -302,28 +309,20 @@ func (r *sqliteRepo) UpdateIssue(ctx context.Context, issue *domain.Issue) error
 		return fmt.Errorf("failed to update issue: %w", err)
 	}
 
-	return nil
-}
+	if issue.Labels != nil {
+		if _, err := tx.ExecContext(ctx, "DELETE FROM labels WHERE issue_id = ?", issue.ID); err != nil {
+			return fmt.Errorf("failed to delete labels: %w", err)
+		}
 
-func (r *sqliteRepo) ReplaceLabels(ctx context.Context, issueID string, labels []string) error {
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback()
-
-	if _, err := tx.ExecContext(ctx, "DELETE FROM labels WHERE issue_id = ?", issueID); err != nil {
-		return fmt.Errorf("failed to delete labels: %w", err)
-	}
-
-	for _, label := range labels {
-		if _, err := tx.ExecContext(ctx, "INSERT INTO labels (issue_id, label) VALUES (?, ?)", issueID, label); err != nil {
-			return fmt.Errorf("failed to insert label %q: %w", label, err)
+		for _, label := range issue.Labels {
+			if _, err := tx.ExecContext(ctx, "INSERT INTO labels (issue_id, label) VALUES (?, ?)", issue.ID, label); err != nil {
+				return fmt.Errorf("failed to insert label %q: %w", label, err)
+			}
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit labels: %w", err)
+		return fmt.Errorf("failed to commit issue update: %w", err)
 	}
 
 	return nil

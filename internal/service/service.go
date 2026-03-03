@@ -52,12 +52,6 @@ func (s *Service) CreateIssue(ctx context.Context, issue *domain.Issue) (string,
 		return "", fmt.Errorf("failed to create issue: %w", err)
 	}
 
-	if len(issue.Labels) > 0 {
-		if err := s.repo.AddLabels(ctx, id, issue.Labels); err != nil {
-			return "", fmt.Errorf("failed to add labels: %w", err)
-		}
-	}
-
 	slog.Debug("issue created", "id", id)
 
 	return id, nil
@@ -214,18 +208,15 @@ func (s *Service) UpdateIssue(ctx context.Context, idOrPrefix string, update dom
 		changed = append(changed, "closed_at")
 	}
 
+	if update.Labels != nil {
+		issue.Labels = *update.Labels
+		changed = append(changed, "labels")
+	}
+
 	slog.Debug("updating issue", "id", fullID, "fields_changed", changed)
 
 	if err := s.repo.UpdateIssue(ctx, issue); err != nil {
 		return nil, fmt.Errorf("failed to update issue: %w", err)
-	}
-
-	if update.Labels != nil {
-		if err := s.repo.ReplaceLabels(ctx, fullID, *update.Labels); err != nil {
-			return nil, fmt.Errorf("failed to replace labels: %w", err)
-		}
-		issue.Labels = *update.Labels
-		changed = append(changed, "labels")
 	}
 
 	slog.Debug("issue updated", "id", fullID, "fields_changed", changed)
