@@ -39,7 +39,6 @@ func newInitCmd() *cobra.Command {
 			}
 
 			dbPath := filepath.Join(pebbleDir, "pebble.db")
-			// TODO: allow user configuration if something other than sqlite is preferred
 			r, err := sqlite.NewRepo(repo.WithLocation(dbPath))
 			if err != nil {
 				return fmt.Errorf("failed to initialize database: %w", err)

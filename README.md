@@ -10,6 +10,8 @@ Pebble keeps the features of beads that I use everyday and drops everything else
 
 ## Architecture
 
+### Flow Chart
+
 ```mermaid
 graph TD
   subgraph CLI ["pb CLI (cobra)"]
@@ -40,6 +42,42 @@ graph TD
   SVC --> REPO_IF
   REPO_IF -.-> SQLITE
   SQLITE --> DB
+```
+
+### ER Diagram
+
+```mermaid
+erDiagram
+  issues {
+    text id PK
+    text title
+    text description
+    text status "open|in_progress|approved|rejected|closed"
+    text type "task|bug|feature|chore|decision|epic"
+    int priority "0-4"
+    int estimate_mins
+    text parent_id FK "self-ref"
+  }
+
+  dependencies {
+    text issue_id PK "FK → issues"
+    text depends_on_id PK "FK → issues"
+  }
+
+  labels {
+    text issue_id PK "FK → issues"
+    text label PK
+  }
+
+  comments {
+    int id PK
+    text issue_id FK
+    text body
+  }
+
+  issues ||--o{ dependencies : "blocked by"
+  issues ||--o{ labels : has
+  issues ||--o{ comments : has
 ```
 
 ## Usage

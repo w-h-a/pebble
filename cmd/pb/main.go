@@ -55,7 +55,6 @@ func newRootCmd() *cobra.Command {
 			}
 
 			dbPath := filepath.Join(pebbleDir, "pebble.db")
-			// TODO: take user configuration as input if want something other than sqlite
 			r, err := sqlite.NewRepo(repo.WithLocation(dbPath))
 			if err != nil {
 				return fmt.Errorf("failed to open database: %w", err)
