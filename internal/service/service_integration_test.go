@@ -9,9 +9,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/w-h-a/pebble/internal/client/repo"
-	"github.com/w-h-a/pebble/internal/client/repo/sqlite"
-	"github.com/w-h-a/pebble/internal/domain"
+	"github.com/w-h-a/bees/internal/client/repo"
+	"github.com/w-h-a/bees/internal/client/repo/sqlite"
+	"github.com/w-h-a/bees/internal/domain"
 )
 
 func TestCreateAndGetIssue(t *testing.T) {
@@ -615,7 +615,7 @@ func TestUpcomingIssues_ExcludesClosed(t *testing.T) {
 func setupService(t *testing.T) *Service {
 	t.Helper()
 
-	dbPath := filepath.Join(t.TempDir(), "pebble.db")
+	dbPath := filepath.Join(t.TempDir(), "bees.db")
 
 	r, err := sqlite.NewRepo(repo.WithLocation(dbPath))
 	require.NoError(t, err)

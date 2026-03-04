@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/w-h-a/pebble/internal/client/repo"
-	"github.com/w-h-a/pebble/internal/domain"
-	"github.com/w-h-a/pebble/internal/util/idgen"
+	"github.com/w-h-a/bees/internal/client/repo"
+	"github.com/w-h-a/bees/internal/domain"
+	"github.com/w-h-a/bees/internal/util/idgen"
 )
 
 const (

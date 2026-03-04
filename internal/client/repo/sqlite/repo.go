@@ -7,8 +7,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/w-h-a/pebble/internal/client/repo"
-	"github.com/w-h-a/pebble/internal/domain"
+	"github.com/w-h-a/bees/internal/client/repo"
+	"github.com/w-h-a/bees/internal/domain"
 	_ "modernc.org/sqlite"
 )
 

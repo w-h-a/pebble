@@ -10,21 +10,21 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func discoverPebbleDir() (string, error) {
+func discoverBeesDir() (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {
 		return "", err
 	}
 
 	for {
-		candidate := filepath.Join(dir, ".pebble")
-		if info, err := os.Stat(filepath.Join(candidate, "pebble.db")); err == nil && !info.IsDir() {
+		candidate := filepath.Join(dir, ".bees")
+		if info, err := os.Stat(filepath.Join(candidate, "bees.db")); err == nil && !info.IsDir() {
 			return candidate, nil
 		}
 
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			return "", fmt.Errorf("no .pebble directory found")
+			return "", fmt.Errorf("no .bees directory found")
 		}
 
 		dir = parent
@@ -35,8 +35,8 @@ type config struct {
 	IssuePrefix string `yaml:"issue-prefix"`
 }
 
-func readPrefix(pebbleDir string) (string, error) {
-	data, err := os.ReadFile(filepath.Join(pebbleDir, "config.yaml"))
+func readPrefix(beesDir string) (string, error) {
+	data, err := os.ReadFile(filepath.Join(beesDir, "config.yaml"))
 	if err != nil {
 		return "", fmt.Errorf("failed to read config.yaml: %w", err)
 	}
@@ -57,7 +57,7 @@ func addToGitExclude() error {
 	}
 
 	existing, err := os.ReadFile(excludePath)
-	if err == nil && strings.Contains(string(existing), ".pebble/") {
+	if err == nil && strings.Contains(string(existing), ".bees/") {
 		slog.Debug("already in .git/info/exclude")
 		return nil
 	}
@@ -68,11 +68,11 @@ func addToGitExclude() error {
 	}
 	defer f.Close()
 
-	if _, err := fmt.Fprintln(f, ".pebble/"); err != nil {
+	if _, err := fmt.Fprintln(f, ".bees/"); err != nil {
 		return fmt.Errorf("failed to write exclude entry: %w", err)
 	}
 
-	slog.Debug("added .pebble/ to .git/info/exclude")
+	slog.Debug("added .bees/ to .git/info/exclude")
 
 	return nil
 }

@@ -16,8 +16,8 @@ integration-test:
 
 .PHONY: go-build
 go-build:
-	CGO_ENABLED=0 go build -o ./bin/pb ./cmd/pb
+	CGO_ENABLED=0 go build -o ./bin/bees ./cmd/bees
 
 .PHONY: go-install
 go-install:
-	go install ./cmd/pb
+	go install ./cmd/bees

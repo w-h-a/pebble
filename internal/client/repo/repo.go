@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/w-h-a/pebble/internal/domain"
+	"github.com/w-h-a/bees/internal/domain"
 )
 
 type Repo interface {
