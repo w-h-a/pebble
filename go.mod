@@ -1,4 +1,4 @@
-module github.com/w-h-a/pebble
+module github.com/w-h-a/bees
 
 go 1.24.0
 

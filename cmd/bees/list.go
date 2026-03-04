@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/w-h-a/pebble/internal/domain"
+	"github.com/w-h-a/bees/internal/domain"
 )
 
 func newListCmd() *cobra.Command {

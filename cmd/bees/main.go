@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"github.com/w-h-a/pebble/internal/client/repo"
-	"github.com/w-h-a/pebble/internal/client/repo/sqlite"
-	"github.com/w-h-a/pebble/internal/service"
+	"github.com/w-h-a/bees/internal/client/repo"
+	"github.com/w-h-a/bees/internal/client/repo/sqlite"
+	"github.com/w-h-a/bees/internal/service"
 )
 
 var (
@@ -21,10 +21,10 @@ var (
 
 func newRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "pb",
+		Use:   "bees",
 		Short: "A minimal task tracker for developers who pair with agentic navigators.",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if verbose || os.Getenv("PB_DEBUG") == "1" {
+			if verbose || os.Getenv("BEES_DEBUG") == "1" {
 				opts := &slog.HandlerOptions{
 					Level: slog.LevelDebug,
 				}
@@ -51,19 +51,19 @@ func newRootCmd() *cobra.Command {
 				return nil
 			}
 
-			pebbleDir, err := discoverPebbleDir()
+			beesDir, err := discoverBeesDir()
 			if err != nil {
-				return fmt.Errorf("not a pebble project (run pb init)")
+				return fmt.Errorf("not a bees project (run bees init)")
 			}
 
-			dbPath := filepath.Join(pebbleDir, "pebble.db")
+			dbPath := filepath.Join(beesDir, "bees.db")
 			r, err := sqlite.NewRepo(repo.WithLocation(dbPath))
 			if err != nil {
 				return fmt.Errorf("failed to open database: %w", err)
 			}
 			dbCloser = r.Close
 
-			prefix, err := readPrefix(pebbleDir)
+			prefix, err := readPrefix(beesDir)
 			if err != nil {
 				r.Close()
 				return fmt.Errorf("failed to read config: %w", err)
@@ -71,7 +71,7 @@ func newRootCmd() *cobra.Command {
 
 			svc = service.NewService(r, prefix)
 
-			slog.Debug("project discovered", "dir", pebbleDir, "prefix", prefix)
+			slog.Debug("project discovered", "dir", beesDir, "prefix", prefix)
 
 			return nil
 		},

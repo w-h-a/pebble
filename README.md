@@ -1,4 +1,4 @@
-# Pebble (pb)
+# bees
 
 ## Problem
 
@@ -6,7 +6,7 @@
 
 ## Solution
 
-Pebble keeps the features of beads that I use everyday and drops everything else.
+Bees keeps the features of beads that I use everyday and drops everything else.
 
 ## Architecture
 
@@ -14,7 +14,7 @@ Pebble keeps the features of beads that I use everyday and drops everything else
 
 ```mermaid
 graph TD
-  subgraph CLI ["pb CLI (cobra)"]
+  subgraph CLI ["bees CLI (cobra)"]
     CMD[Command Layer]
   end
 
@@ -28,7 +28,7 @@ graph TD
 
   subgraph Infra ["Infrastructure"]
     SQLITE[SQLite via modernc.org/sqlite]
-    DB[(pebble.db)]
+    DB[(bees.db)]
   end
 
   subgraph Domain ["Domain Layer"]
@@ -83,14 +83,14 @@ erDiagram
 ## Usage
 
 ```text
-pb init [--stealth] [--prefix]      pb ready [--sort --limit]
-pb create "title" [flags]           pb upcoming [--days --assignee]
-pb show <id>                        pb search <query>
-pb update <id> [flags]              pb dep add <id> --blocks <id>
-pb close <id>                       pb dep remove <id> <id>
-pb reopen <id>                      pb comment <id> "text"
-pb delete <id>                      pb stale [--days]
-pb list [--status --type ...]       pb config set|get|list
-pb export [-o file.jsonl]           pb version
-pb import <file.jsonl>
+bees init [--stealth] [--prefix]      bees ready [--sort --limit]
+bees create "title" [flags]           bees upcoming [--days --assignee]
+bees show <id>                        bees search <query>
+bees update <id> [flags]              bees dep add <id> --blocks <id>
+bees close <id>                       bees dep remove <id> <id>
+bees reopen <id>                      bees comment <id> "text"
+bees delete <id>                      bees stale [--days]
+bees list [--status --type ...]       bees config set|get|list
+bees export [-o file.jsonl]           bees version
+bees import <file.jsonl>
 ```

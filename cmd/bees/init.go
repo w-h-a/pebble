@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/w-h-a/pebble/internal/client/repo"
-	"github.com/w-h-a/pebble/internal/client/repo/sqlite"
+	"github.com/w-h-a/bees/internal/client/repo"
+	"github.com/w-h-a/bees/internal/client/repo/sqlite"
 	"gopkg.in/yaml.v3"
 )
 
@@ -22,12 +22,12 @@ func newInitCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Initialize a new pebble project",
+		Short: "Initialize a new bees project",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			pebbleDir := filepath.Join(".", ".pebble")
+			beesDir := filepath.Join(".", ".bees")
 
-			if err := os.MkdirAll(pebbleDir, 0o755); err != nil {
-				return fmt.Errorf("failed to create .pebble directory: %w", err)
+			if err := os.MkdirAll(beesDir, 0o755); err != nil {
+				return fmt.Errorf("failed to create .bees directory: %w", err)
 			}
 
 			if prefix == "" {
@@ -38,7 +38,7 @@ func newInitCmd() *cobra.Command {
 				prefix = strings.TrimRight(filepath.Base(wd), "-")
 			}
 
-			dbPath := filepath.Join(pebbleDir, "pebble.db")
+			dbPath := filepath.Join(beesDir, "bees.db")
 			r, err := sqlite.NewRepo(repo.WithLocation(dbPath))
 			if err != nil {
 				return fmt.Errorf("failed to initialize database: %w", err)
@@ -53,7 +53,7 @@ func newInitCmd() *cobra.Command {
 				return fmt.Errorf("failed to marshal config: %w", err)
 			}
 
-			configPath := filepath.Join(pebbleDir, "config.yaml")
+			configPath := filepath.Join(beesDir, "config.yaml")
 			if err := os.WriteFile(configPath, data, 0o644); err != nil {
 				return fmt.Errorf("failed to write config: %w", err)
 			}
@@ -67,14 +67,14 @@ func newInitCmd() *cobra.Command {
 			}
 
 			if !jsonOutput {
-				fmt.Printf("Initialized pebble project with prefix %q in %s\n", prefix, pebbleDir)
+				fmt.Printf("Initialized bees project with prefix %q in %s\n", prefix, beesDir)
 				return nil
 			}
 
 			out := map[string]string{
 				"status": "initialized",
 				"prefix": prefix,
-				"path":   pebbleDir,
+				"path":   beesDir,
 			}
 
 			enc := json.NewEncoder(os.Stdout)
@@ -84,7 +84,7 @@ func newInitCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&stealth, "stealth", false, "Add .pebble/ to .git/info/exclude")
+	cmd.Flags().BoolVar(&stealth, "stealth", false, "Add .bees/ to .git/info/exclude")
 	cmd.Flags().StringVar(&prefix, "prefix", "", "Issue ID prefix (default: directory name)")
 
 	return cmd

@@ -2,8 +2,8 @@
 bin
 *.exe
 
-# Pebble data
-.pebble/
+# Bees data
+.bees/
 
 # Go
 *.test
