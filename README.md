@@ -6,11 +6,11 @@
 
 ## Problem
 
-[Beads](https://github.com/steveyegge/beads) is a powerful issue tracker that grew to serve multi-agent orchestration. For a solo developer that likes to keep their hands on the wheel while pairing with an agentic navigator, ~80% of it is dead weight.
+[Beads](https://github.com/steveyegge/beads) is a powerful alternative to a collection of .md files that grew to serve multi-agent orchestration. For a developer that likes to keep their hands on the wheel while pairing with an agentic navigator, ~80% of it is dead weight.
 
 ## Solution
 
-Bees keeps the features of beads that I use everyday and drops everything else.
+Bees follows Beads as an alternative to a sea of .md files and drops everything else.
 
 ## Architecture
 

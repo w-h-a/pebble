@@ -71,6 +71,37 @@ func (r *sqliteRepo) IssueExists(ctx context.Context, id string) (bool, error) {
 	return exists, nil
 }
 
+func (r *sqliteRepo) ResolveID(ctx context.Context, partial string) (string, error) {
+	rows, err := r.db.QueryContext(ctx, "SELECT id FROM issues WHERE id LIKE ?", partial+"%")
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve id: %w", err)
+	}
+	defer rows.Close()
+
+	var matches []string
+
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return "", fmt.Errorf("failed to scan id: %w", err)
+		}
+		matches = append(matches, id)
+	}
+
+	if err := rows.Err(); err != nil {
+		return "", fmt.Errorf("failed to resolve id rows: %w", err)
+	}
+
+	switch len(matches) {
+	case 0:
+		return "", fmt.Errorf("no issue found matching %q", partial)
+	case 1:
+		return matches[0], nil
+	default:
+		return "", fmt.Errorf("ambiguous id %q matches %d issues", partial, len(matches))
+	}
+}
+
 func (r *sqliteRepo) GetIssue(ctx context.Context, id string) (*domain.Issue, error) {
 	row := r.db.QueryRowContext(
 		ctx,
@@ -105,104 +136,6 @@ func (r *sqliteRepo) GetIssue(ctx context.Context, id string) (*domain.Issue, er
 	}
 
 	return &issue, nil
-}
-
-func (r *sqliteRepo) GetLabels(ctx context.Context, issueID string) ([]string, error) {
-	rows, err := r.db.QueryContext(ctx, "SELECT label FROM labels WHERE issue_id = ? ORDER BY label", issueID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query labels: %w", err)
-	}
-	defer rows.Close()
-
-	var labels []string
-
-	for rows.Next() {
-		var label string
-		if err := rows.Scan(&label); err != nil {
-			return nil, fmt.Errorf("failed to scan label: %w", err)
-		}
-		labels = append(labels, label)
-	}
-
-	return labels, rows.Err()
-}
-
-func (r *sqliteRepo) GetDependencies(ctx context.Context, issueID string) ([]domain.Dependency, error) {
-	rows, err := r.db.QueryContext(
-		ctx,
-		"SELECT issue_id, depends_on_id, created_at FROM dependencies WHERE issue_id = ? ORDER BY created_at",
-		issueID,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query dependencies: %w", err)
-	}
-	defer rows.Close()
-
-	var deps []domain.Dependency
-
-	for rows.Next() {
-		var d domain.Dependency
-		if err := rows.Scan(&d.IssueID, &d.DependsOnID, &d.CreatedAt); err != nil {
-			return nil, fmt.Errorf("failed to scan dependency: %w", err)
-		}
-		deps = append(deps, d)
-	}
-
-	return deps, rows.Err()
-}
-
-func (r *sqliteRepo) GetComments(ctx context.Context, issueID string) ([]domain.Comment, error) {
-	rows, err := r.db.QueryContext(ctx,
-		"SELECT id, issue_id, author, body, created_at FROM comments WHERE issue_id = ? ORDER BY created_at",
-		issueID,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query comments: %w", err)
-	}
-	defer rows.Close()
-
-	var comments []domain.Comment
-
-	for rows.Next() {
-		var c domain.Comment
-		if err := rows.Scan(&c.ID, &c.IssueID, &c.Author, &c.Body, &c.CreatedAt); err != nil {
-			return nil, fmt.Errorf("failed to scan comment: %w", err)
-		}
-		comments = append(comments, c)
-	}
-
-	return comments, rows.Err()
-}
-
-func (r *sqliteRepo) ResolveID(ctx context.Context, partial string) (string, error) {
-	rows, err := r.db.QueryContext(ctx, "SELECT id FROM issues WHERE id LIKE ?", partial+"%")
-	if err != nil {
-		return "", fmt.Errorf("failed to resolve id: %w", err)
-	}
-	defer rows.Close()
-
-	var matches []string
-
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			return "", fmt.Errorf("failed to scan id: %w", err)
-		}
-		matches = append(matches, id)
-	}
-
-	if err := rows.Err(); err != nil {
-		return "", fmt.Errorf("failed to resolve id rows: %w", err)
-	}
-
-	switch len(matches) {
-	case 0:
-		return "", fmt.Errorf("no issue found matching %q", partial)
-	case 1:
-		return matches[0], nil
-	default:
-		return "", fmt.Errorf("ambiguous id %q matches %d issues", partial, len(matches))
-	}
 }
 
 func (r *sqliteRepo) ListIssues(ctx context.Context, filter domain.ListFilter) ([]domain.Issue, error) {
@@ -458,6 +391,133 @@ func (r *sqliteRepo) UpcomingIssues(ctx context.Context, now time.Time, days int
 	}
 
 	return issues, rows.Err()
+}
+
+func (r *sqliteRepo) GetLabels(ctx context.Context, issueID string) ([]string, error) {
+	rows, err := r.db.QueryContext(ctx, "SELECT label FROM labels WHERE issue_id = ? ORDER BY label", issueID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query labels: %w", err)
+	}
+	defer rows.Close()
+
+	var labels []string
+
+	for rows.Next() {
+		var label string
+		if err := rows.Scan(&label); err != nil {
+			return nil, fmt.Errorf("failed to scan label: %w", err)
+		}
+		labels = append(labels, label)
+	}
+
+	return labels, rows.Err()
+}
+
+func (r *sqliteRepo) GetDependencies(ctx context.Context, issueID string) ([]domain.Dependency, error) {
+	rows, err := r.db.QueryContext(
+		ctx,
+		"SELECT issue_id, depends_on_id, created_at FROM dependencies WHERE issue_id = ? ORDER BY created_at",
+		issueID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query dependencies: %w", err)
+	}
+	defer rows.Close()
+
+	var deps []domain.Dependency
+
+	for rows.Next() {
+		var d domain.Dependency
+		if err := rows.Scan(&d.IssueID, &d.DependsOnID, &d.CreatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan dependency: %w", err)
+		}
+		deps = append(deps, d)
+	}
+
+	return deps, rows.Err()
+}
+
+func (r *sqliteRepo) AddDependency(ctx context.Context, dep domain.Dependency) error {
+	_, err := r.db.ExecContext(
+		ctx,
+		"INSERT OR IGNORE INTO dependencies (issue_id, depends_on_id, created_at) VALUES (?, ?, ?)",
+		dep.IssueID,
+		dep.DependsOnID,
+		dep.CreatedAt,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to add dependency: %w", err)
+	}
+
+	return nil
+}
+
+func (r *sqliteRepo) RemoveDependency(ctx context.Context, issueID, dependsOnID string) (bool, error) {
+	result, err := r.db.ExecContext(
+		ctx,
+		"DELETE FROM dependencies WHERE issue_id = ? AND depends_on_id = ?",
+		issueID,
+		dependsOnID,
+	)
+	if err != nil {
+		return false, fmt.Errorf("failed to remove dependency: %w", err)
+	}
+
+	n, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("failed to check rows affected: %w", err)
+	}
+
+	return n > 0, nil
+}
+
+func (r *sqliteRepo) GetDependencyGraph(ctx context.Context) ([]domain.Dependency, error) {
+	rows, err := r.db.QueryContext(
+		ctx,
+		"SELECT issue_id, depends_on_id, created_at FROM dependencies ORDER BY created_at",
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query dependency graph: %w", err)
+	}
+	defer rows.Close()
+
+	var deps []domain.Dependency
+	for rows.Next() {
+		var d domain.Dependency
+		if err := rows.Scan(
+			&d.IssueID,
+			&d.DependsOnID,
+			&d.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan dependency: %w", err)
+		}
+		deps = append(deps, d)
+	}
+
+	return deps, rows.Err()
+}
+
+func (r *sqliteRepo) GetComments(ctx context.Context, issueID string) ([]domain.Comment, error) {
+	rows, err := r.db.QueryContext(ctx,
+		"SELECT id, issue_id, author, body, created_at FROM comments WHERE issue_id = ? ORDER BY created_at",
+		issueID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query comments: %w", err)
+	}
+	defer rows.Close()
+
+	var comments []domain.Comment
+
+	for rows.Next() {
+		var c domain.Comment
+		if err := rows.Scan(&c.ID, &c.IssueID, &c.Author, &c.Body, &c.CreatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan comment: %w", err)
+		}
+		comments = append(comments, c)
+	}
+
+	return comments, rows.Err()
 }
 
 func (r *sqliteRepo) Close() error {

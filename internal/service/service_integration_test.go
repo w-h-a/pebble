@@ -612,6 +612,186 @@ func TestUpcomingIssues_ExcludesClosed(t *testing.T) {
 	assert.Empty(t, issues)
 }
 
+func TestAddDependency(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	a := &domain.Issue{Title: "Blocker"}
+	aID, err := svc.CreateIssue(ctx, a)
+	require.NoError(t, err)
+
+	b := &domain.Issue{Title: "Blocked"}
+	bID, err := svc.CreateIssue(ctx, b)
+	require.NoError(t, err)
+
+	// Act
+	blocker, blocked, err := svc.AddDependency(ctx, aID, bID)
+	require.NoError(t, err)
+
+	// Assert
+	assert.Equal(t, aID, blocker)
+	assert.Equal(t, bID, blocked)
+
+	got, err := svc.GetIssue(ctx, bID)
+	assert.NoError(t, err)
+	assert.Len(t, got.Dependencies, 1)
+	assert.Equal(t, aID, got.Dependencies[0].DependsOnID)
+}
+
+func TestAddDependency_SelfBlock(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	a := &domain.Issue{Title: "Self"}
+	aID, err := svc.CreateIssue(ctx, a)
+	require.NoError(t, err)
+
+	// Act
+	_, _, err = svc.AddDependency(ctx, aID, aID)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "may not block itself")
+}
+
+func TestAddDependency_CycleDetected(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	a := &domain.Issue{Title: "A"}
+	aID, err := svc.CreateIssue(ctx, a)
+	require.NoError(t, err)
+
+	b := &domain.Issue{Title: "B"}
+	bID, err := svc.CreateIssue(ctx, b)
+	require.NoError(t, err)
+
+	c := &domain.Issue{Title: "C"}
+	cID, err := svc.CreateIssue(ctx, c)
+	require.NoError(t, err)
+
+	_, _, err = svc.AddDependency(ctx, aID, bID) // A blocks B
+	require.NoError(t, err)
+
+	_, _, err = svc.AddDependency(ctx, bID, cID) // B blocks C
+	require.NoError(t, err)
+
+	// Act: C blocks A → cycle
+	_, _, err = svc.AddDependency(ctx, cID, aID)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "would create a cycle")
+
+	// Assert: edge was rolled back
+	got, err := svc.GetIssue(ctx, aID)
+	assert.NoError(t, err)
+	assert.Empty(t, got.Dependencies)
+}
+
+func TestRemoveDependency(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	a := &domain.Issue{Title: "Blocker"}
+	aID, err := svc.CreateIssue(ctx, a)
+	require.NoError(t, err)
+
+	b := &domain.Issue{Title: "Blocked"}
+	bID, err := svc.CreateIssue(ctx, b)
+	require.NoError(t, err)
+
+	_, _, err = svc.AddDependency(ctx, aID, bID)
+	require.NoError(t, err)
+
+	// Act
+	blocker, blocked, changed, err := svc.RemoveDependency(ctx, aID, bID)
+	require.NoError(t, err)
+
+	// Assert
+	assert.True(t, changed)
+	assert.Equal(t, aID, blocker)
+	assert.Equal(t, bID, blocked)
+
+	got, err := svc.GetIssue(ctx, bID)
+	assert.NoError(t, err)
+	assert.Empty(t, got.Dependencies)
+}
+
+func TestRemoveDependency_Idempotent(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	a := &domain.Issue{Title: "A"}
+	aID, err := svc.CreateIssue(ctx, a)
+	require.NoError(t, err)
+
+	b := &domain.Issue{Title: "B"}
+	bID, err := svc.CreateIssue(ctx, b)
+	require.NoError(t, err)
+
+	// Act: remove non-existent dependency
+	_, _, changed, err := svc.RemoveDependency(ctx, aID, bID)
+	require.NoError(t, err)
+
+	// Assert
+	assert.False(t, changed)
+}
+
+func TestReadyIssues_ExcludesBlocked(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	blocker := &domain.Issue{Title: "Blocker"}
+	blockerID, err := svc.CreateIssue(ctx, blocker)
+	require.NoError(t, err)
+
+	blocked := &domain.Issue{Title: "Blocked"}
+	blockedID, err := svc.CreateIssue(ctx, blocked)
+	require.NoError(t, err)
+
+	_, _, err = svc.AddDependency(ctx, blockerID, blockedID)
+	require.NoError(t, err)
+
+	// Act
+	issues, err := svc.ReadyIssues(ctx, "", 0)
+	require.NoError(t, err)
+
+	// Assert: only the blocker is ready
+	assert.Len(t, issues, 1)
+	assert.Equal(t, "Blocker", issues[0].Title)
+}
+
 func setupService(t *testing.T) *Service {
 	t.Helper()
 

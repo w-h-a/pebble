@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/w-h-a/bees/internal/client/repo"
 	"github.com/w-h-a/bees/internal/domain"
+	"github.com/w-h-a/bees/internal/util/dfs"
 	"github.com/w-h-a/bees/internal/util/idgen"
 )
 
@@ -363,6 +365,92 @@ func (s *Service) UpcomingIssues(ctx context.Context, days int, assignee string)
 	slog.Debug("upcoming issues listed", "count", len(issues))
 
 	return issues, nil
+}
+
+func (s *Service) AddDependency(ctx context.Context, blockerIDOrPrefix, blockedIDOrPrefix string) (string, string, error) {
+	slog.Debug("adding dependency", "blocker", blockerIDOrPrefix, "blocked", blockedIDOrPrefix)
+
+	blockerID, err := s.repo.ResolveID(ctx, blockerIDOrPrefix)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to resolve blocker: %w", err)
+	}
+
+	blockedID, err := s.repo.ResolveID(ctx, blockedIDOrPrefix)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to resolve blocked: %w", err)
+	}
+
+	if blockerID == blockedID {
+		return "", "", fmt.Errorf("an issue may not block itself")
+	}
+
+	dep := domain.Dependency{
+		IssueID:     blockedID,
+		DependsOnID: blockerID,
+		CreatedAt:   time.Now(),
+	}
+
+	if err := s.repo.AddDependency(ctx, dep); err != nil {
+		return "", "", fmt.Errorf("failed to add dependency: %w", err)
+	}
+
+	hasCycle, cycle, err := s.detectCycle(ctx, blockedID)
+	if err != nil {
+		if _, err := s.repo.RemoveDependency(ctx, blockedID, blockerID); err != nil {
+			return "", "", fmt.Errorf("failed to check for cycles and remove dependency: %w", err)
+		}
+		return "", "", fmt.Errorf("failed to check for cycles: %w", err)
+	}
+
+	if hasCycle {
+		if _, err := s.repo.RemoveDependency(ctx, blockedID, blockerID); err != nil {
+			return "", "", fmt.Errorf("cycle detected and failed to remove dependency: %w", err)
+		}
+		return "", "", fmt.Errorf("dependency would create a cycle: %s", strings.Join(cycle, " -> "))
+	}
+
+	slog.Debug("dependency added", "blocker", blockerID, "blocked", blockedID)
+
+	return blockerID, blockedID, nil
+}
+
+func (s *Service) RemoveDependency(ctx context.Context, blockerIDOrPrefix, blockedIDOrPrefix string) (string, string, bool, error) {
+	slog.Debug("removing dependency", "blocker", blockerIDOrPrefix, "blocked", blockedIDOrPrefix)
+
+	blockerID, err := s.repo.ResolveID(ctx, blockerIDOrPrefix)
+	if err != nil {
+		return "", "", false, fmt.Errorf("failed to resolve blocker: %w", err)
+	}
+
+	blockedID, err := s.repo.ResolveID(ctx, blockedIDOrPrefix)
+	if err != nil {
+		return "", "", false, fmt.Errorf("failed to resolve blocked: %w", err)
+	}
+
+	changed, err := s.repo.RemoveDependency(ctx, blockedID, blockerID)
+	if err != nil {
+		return "", "", false, fmt.Errorf("failed to remove dependency: %w", err)
+	}
+
+	slog.Debug("dependency removed", "blocker", blockerID, "blocked", blockedID, "changed", changed)
+
+	return blockerID, blockedID, changed, nil
+}
+
+func (s *Service) detectCycle(ctx context.Context, startID string) (bool, []string, error) {
+	deps, err := s.repo.GetDependencyGraph(ctx)
+	if err != nil {
+		return false, nil, err
+	}
+
+	graph := map[string][]string{}
+	for _, d := range deps {
+		graph[d.IssueID] = append(graph[d.IssueID], d.DependsOnID)
+	}
+
+	hasCycle, cycle := dfs.DetectCycle(graph, startID)
+
+	return hasCycle, cycle, nil
 }
 
 type Service struct {
