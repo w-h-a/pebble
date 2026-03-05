@@ -236,6 +236,10 @@ func (s *Service) ListIssues(ctx context.Context, filter domain.ListFilter) ([]d
 		return nil, fmt.Errorf("failed to list issues: %w", err)
 	}
 
+	if err := s.populateRelations(ctx, issues); err != nil {
+		return nil, err
+	}
+
 	slog.Debug("issues listed", "count", len(issues))
 
 	return issues, nil
@@ -251,6 +255,10 @@ func (s *Service) SearchIssues(ctx context.Context, query string, limit int) ([]
 	issues, err := s.repo.SearchIssues(ctx, query, limit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search issues: %w", err)
+	}
+
+	if err := s.populateRelations(ctx, issues); err != nil {
+		return nil, err
 	}
 
 	slog.Debug("search results", "count", len(issues))
@@ -468,6 +476,10 @@ func (s *Service) ReadyIssues(ctx context.Context, sort string, limit int) ([]do
 		return nil, fmt.Errorf("failed to list ready issues: %w", err)
 	}
 
+	if err := s.populateRelations(ctx, issues); err != nil {
+		return nil, err
+	}
+
 	slog.Debug("ready issues listed", "count", len(issues))
 
 	return issues, nil
@@ -483,6 +495,10 @@ func (s *Service) UpcomingIssues(ctx context.Context, days int, assignee string)
 	issues, err := s.repo.UpcomingIssues(ctx, time.Now(), days, assignee)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list upcoming issues: %w", err)
+	}
+
+	if err := s.populateRelations(ctx, issues); err != nil {
+		return nil, err
 	}
 
 	slog.Debug("upcoming issues listed", "count", len(issues))
@@ -560,22 +576,6 @@ func (s *Service) RemoveDependency(ctx context.Context, blockerIDOrPrefix, block
 	return blockerID, blockedID, changed, nil
 }
 
-func (s *Service) detectCycle(ctx context.Context, startID string) (bool, []string, error) {
-	deps, err := s.repo.GetDependencyGraph(ctx)
-	if err != nil {
-		return false, nil, err
-	}
-
-	graph := map[string][]string{}
-	for _, d := range deps {
-		graph[d.IssueID] = append(graph[d.IssueID], d.DependsOnID)
-	}
-
-	hasCycle, cycle := dfs.DetectCycle(graph, startID)
-
-	return hasCycle, cycle, nil
-}
-
 func (s *Service) AddComment(ctx context.Context, idOrPrefix string, author string, body string) (*domain.Comment, error) {
 	slog.Debug("adding comment", "id_or_prefix", idOrPrefix)
 
@@ -602,6 +602,48 @@ func (s *Service) AddComment(ctx context.Context, idOrPrefix string, author stri
 	slog.Debug("comment added", "id", comment.ID, "issue_id", fullID)
 
 	return comment, nil
+}
+
+func (s *Service) detectCycle(ctx context.Context, startID string) (bool, []string, error) {
+	deps, err := s.repo.GetDependencyGraph(ctx)
+	if err != nil {
+		return false, nil, err
+	}
+
+	graph := map[string][]string{}
+	for _, d := range deps {
+		graph[d.IssueID] = append(graph[d.IssueID], d.DependsOnID)
+	}
+
+	hasCycle, cycle := dfs.DetectCycle(graph, startID)
+
+	return hasCycle, cycle, nil
+}
+
+func (s *Service) populateRelations(ctx context.Context, issues []domain.Issue) error {
+	for i := range issues {
+		id := issues[i].ID
+
+		labels, err := s.repo.GetLabels(ctx, id)
+		if err != nil {
+			return fmt.Errorf("failed to get labels for %s: %w", id, err)
+		}
+		issues[i].Labels = labels
+
+		deps, err := s.repo.GetDependencies(ctx, id)
+		if err != nil {
+			return fmt.Errorf("failed to get dependencies for %s: %w", id, err)
+		}
+		issues[i].Dependencies = deps
+
+		comments, err := s.repo.GetComments(ctx, id)
+		if err != nil {
+			return fmt.Errorf("failed to get comments for %s: %w", id, err)
+		}
+		issues[i].Comments = comments
+	}
+
+	return nil
 }
 
 func NewService(repo repo.Repo, imp importer.Importer, prefix string) *Service {

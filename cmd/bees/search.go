@@ -26,7 +26,7 @@ func newSearchCmd() *cobra.Command {
 			}
 
 			enc := json.NewEncoder(os.Stdout)
-			enc.SetIndent("", "  ")
+			enc.SetIndent("", " ")
 
 			return enc.Encode(issues)
 		},

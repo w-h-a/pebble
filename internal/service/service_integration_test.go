@@ -201,6 +201,51 @@ func TestListIssues_StatusAll(t *testing.T) {
 	assert.Len(t, issues, 2)
 }
 
+func TestListIssues_PopulatesRelations(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	issue := &domain.Issue{Title: "Hydration test", Labels: []string{"backend", "v1"}}
+	id, err := svc.CreateIssue(ctx, issue)
+	require.NoError(t, err)
+
+	blocker := &domain.Issue{Title: "Blocker"}
+	blockerID, err := svc.CreateIssue(ctx, blocker)
+	require.NoError(t, err)
+
+	_, _, err = svc.AddDependency(ctx, blockerID, id)
+	require.NoError(t, err)
+
+	_, err = svc.AddComment(ctx, id, "wes", "test comment")
+	require.NoError(t, err)
+
+	// Act
+	issues, err := svc.ListIssues(ctx, domain.ListFilter{})
+	require.NoError(t, err)
+
+	// Assert: find the hydration test issue
+	var got *domain.Issue
+	for i := range issues {
+		if issues[i].ID == id {
+			got = &issues[i]
+			break
+		}
+	}
+	require.NotNil(t, got, "expected issue not found in list")
+
+	// Assert: all three relations populated
+	assert.Equal(t, []string{"backend", "v1"}, got.Labels)
+	assert.Len(t, got.Dependencies, 1)
+	assert.Equal(t, blockerID, got.Dependencies[0].DependsOnID)
+	assert.Len(t, got.Comments, 1)
+	assert.Equal(t, "test comment", got.Comments[0].Body)
+}
+
 func TestSearchIssues_ByTitle(t *testing.T) {
 	if os.Getenv("INTEGRATION") == "" {
 		t.Skip("set INTEGRATION=1 to run")
@@ -296,6 +341,42 @@ func TestSearchIssues_MatchesBothTitleAndDescription(t *testing.T) {
 
 	// Assert: both match
 	assert.Len(t, issues, 2)
+}
+
+func TestSearchIssues_PopulatesRelations(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	issue := &domain.Issue{Title: "Searchable hydration", Labels: []string{"api"}}
+	id, err := svc.CreateIssue(ctx, issue)
+	require.NoError(t, err)
+
+	blocker := &domain.Issue{Title: "Blocker"}
+	blockerID, err := svc.CreateIssue(ctx, blocker)
+	require.NoError(t, err)
+
+	_, _, err = svc.AddDependency(ctx, blockerID, id)
+	require.NoError(t, err)
+
+	_, err = svc.AddComment(ctx, id, "wes", "search comment")
+	require.NoError(t, err)
+
+	// Act
+	issues, err := svc.SearchIssues(ctx, "Searchable", 0)
+	require.NoError(t, err)
+
+	// Assert: relations populated
+	require.Len(t, issues, 1)
+	assert.Equal(t, []string{"api"}, issues[0].Labels)
+	assert.Len(t, issues[0].Dependencies, 1)
+	assert.Equal(t, blockerID, issues[0].Dependencies[0].DependsOnID)
+	assert.Len(t, issues[0].Comments, 1)
+	assert.Equal(t, "search comment", issues[0].Comments[0].Body)
 }
 
 func TestUpdateIssue_AppliesChanges(t *testing.T) {

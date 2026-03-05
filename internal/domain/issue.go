@@ -26,23 +26,23 @@ const (
 )
 
 type Issue struct {
-	ID           string
-	Title        string
-	Description  string
-	Status       Status
-	Type         Type
-	Priority     *int
-	Assignee     string
-	EstimateMins int
-	DeferUntil   *time.Time
-	DueAt        *time.Time
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	ClosedAt     *time.Time
-	ParentID     *string
-	Labels       []string
-	Dependencies []Dependency
-	Comments     []Comment
+	ID           string       `json:"id"`
+	Title        string       `json:"title"`
+	Description  string       `json:"description"`
+	Status       Status       `json:"status"`
+	Type         Type         `json:"type"`
+	Priority     *int         `json:"priority"`
+	Assignee     string       `json:"assignee"`
+	EstimateMins int          `json:"estimate_mins"`
+	DeferUntil   *time.Time   `json:"defer_until"`
+	DueAt        *time.Time   `json:"due_at"`
+	CreatedAt    time.Time    `json:"created_at"`
+	UpdatedAt    time.Time    `json:"updated_at"`
+	ClosedAt     *time.Time   `json:"closed_at"`
+	ParentID     *string      `json:"parent_id"`
+	Labels       []string     `json:"labels"`
+	Dependencies []Dependency `json:"dependencies"`
+	Comments     []Comment    `json:"comments"`
 }
 
 func (i *Issue) SetDefaults() {
