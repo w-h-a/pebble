@@ -34,17 +34,15 @@ func newImportCmd() *cobra.Command {
 				return nil
 			}
 
-			out := map[string]any{
+			enc := json.NewEncoder(os.Stdout)
+			enc.SetIndent("", " ")
+
+			return enc.Encode(map[string]any{
 				"created":   result.Created,
 				"updated":   result.Updated,
 				"unchanged": result.Unchanged,
 				"skipped":   result.Skipped,
-			}
-
-			enc := json.NewEncoder(os.Stdout)
-			enc.SetIndent("", " ")
-
-			return enc.Encode(out)
+			})
 		},
 	}
 

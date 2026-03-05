@@ -136,6 +136,7 @@ func newRootCmd() *cobra.Command {
 	cmd.AddCommand(newDepCmd())
 	cmd.AddCommand(newCommentCmd(&cfg))
 	cmd.AddCommand(newConfigCmd(&beesDir, &cfg))
+	cmd.AddCommand(newVersionCmd())
 
 	return cmd
 }

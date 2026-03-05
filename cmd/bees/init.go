@@ -68,16 +68,14 @@ func newInitCmd() *cobra.Command {
 				return nil
 			}
 
-			out := map[string]string{
-				"status": "initialized",
-				"prefix": prefix,
-				"path":   beesDir,
-			}
-
 			enc := json.NewEncoder(os.Stdout)
 			enc.SetIndent("", " ")
 
-			return enc.Encode(out)
+			return enc.Encode(map[string]string{
+				"status": "initialized",
+				"prefix": prefix,
+				"path":   beesDir,
+			})
 		},
 	}
 

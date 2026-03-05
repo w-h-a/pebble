@@ -82,16 +82,19 @@ func newCreateCmd() *cobra.Command {
 				return nil
 			}
 
-			out := map[string]any{
-				"id":       id,
-				"title":    issue.Title,
-				"type":     string(issue.Type),
-				"status":   string(issue.Status),
-				"priority": *issue.Priority,
-			}
-
 			enc := json.NewEncoder(os.Stdout)
 			enc.SetIndent("", " ")
+
+			out := map[string]any{
+				"id":     id,
+				"title":  issue.Title,
+				"type":   string(issue.Type),
+				"status": string(issue.Status),
+			}
+
+			if issue.Priority != nil {
+				out["priority"] = *issue.Priority
+			}
 
 			return enc.Encode(out)
 		},
