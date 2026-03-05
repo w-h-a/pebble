@@ -24,6 +24,7 @@ type Repo interface {
 
 	GetDependencies(ctx context.Context, issueID string) ([]domain.Dependency, error)
 	AddDependency(ctx context.Context, dep domain.Dependency) error
+	AddDependencyIfAcyclic(ctx context.Context, dep domain.Dependency) error
 	GetDependencyGraph(ctx context.Context) ([]domain.Dependency, error)
 	RemoveDependency(ctx context.Context, issueID, dependsOnID string) (bool, error)
 

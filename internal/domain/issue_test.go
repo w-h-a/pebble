@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSetDefaults_Empty(t *testing.T) {
@@ -24,13 +24,13 @@ func TestSetDefaults_Empty(t *testing.T) {
 	after := time.Now()
 
 	// Assert
-	assert.Equal(t, StatusOpen, i.Status)
-	assert.Equal(t, TypeTask, i.Type)
-	assert.Equal(t, 2, *i.Priority)
-	assert.False(t, i.CreatedAt.Before(before))
-	assert.True(t, i.CreatedAt.Before(after))
-	assert.False(t, i.UpdatedAt.Before(before))
-	assert.True(t, i.UpdatedAt.Before(after))
+	require.Equal(t, StatusOpen, i.Status)
+	require.Equal(t, TypeTask, i.Type)
+	require.Equal(t, 2, *i.Priority)
+	require.False(t, i.CreatedAt.Before(before))
+	require.True(t, i.CreatedAt.Before(after))
+	require.False(t, i.UpdatedAt.Before(before))
+	require.True(t, i.UpdatedAt.Before(after))
 }
 
 func TestSetDefaults_PreservesExisting(t *testing.T) {
@@ -55,9 +55,9 @@ func TestSetDefaults_PreservesExisting(t *testing.T) {
 	i.SetDefaults()
 
 	// Assert
-	assert.Equal(t, StatusInProgress, i.Status)
-	assert.Equal(t, TypeBug, i.Type)
-	assert.Equal(t, 1, *i.Priority)
-	assert.Equal(t, ts, i.CreatedAt)
-	assert.Equal(t, ts, i.UpdatedAt)
+	require.Equal(t, StatusInProgress, i.Status)
+	require.Equal(t, TypeBug, i.Type)
+	require.Equal(t, 1, *i.Priority)
+	require.Equal(t, ts, i.CreatedAt)
+	require.Equal(t, ts, i.UpdatedAt)
 }

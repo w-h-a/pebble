@@ -10,6 +10,7 @@ import (
 
 	"github.com/w-h-a/bees/internal/client/repo"
 	"github.com/w-h-a/bees/internal/domain"
+	"github.com/w-h-a/bees/internal/util/dfs"
 	_ "modernc.org/sqlite"
 )
 
@@ -513,23 +514,59 @@ func (r *sqliteRepo) AddDependency(ctx context.Context, dep domain.Dependency) e
 	return nil
 }
 
-func (r *sqliteRepo) RemoveDependency(ctx context.Context, issueID, dependsOnID string) (bool, error) {
-	result, err := r.db.ExecContext(
+func (r *sqliteRepo) AddDependencyIfAcyclic(ctx context.Context, dep domain.Dependency) error {
+	slog.Debug("add dependency transaction begin", "issue_id", dep.IssueID, "depends_on_id", dep.DependsOnID)
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(
 		ctx,
-		"DELETE FROM dependencies WHERE issue_id = ? AND depends_on_id = ?",
-		issueID,
-		dependsOnID,
+		"INSERT OR IGNORE INTO dependencies (issue_id, depends_on_id, created_at) VALUES (?, ?, ?)",
+		dep.IssueID,
+		dep.DependsOnID,
+		dep.CreatedAt,
 	)
 	if err != nil {
-		return false, fmt.Errorf("failed to remove dependency: %w", err)
+		return fmt.Errorf("failed to add dependency: %w", err)
 	}
 
-	n, err := result.RowsAffected()
+	rows, err := tx.QueryContext(ctx, "SELECT issue_id, depends_on_id FROM dependencies")
 	if err != nil {
-		return false, fmt.Errorf("failed to check rows affected: %w", err)
+		return fmt.Errorf("failed to query dependency graph: %w", err)
+	}
+	defer rows.Close()
+
+	graph := map[string][]string{}
+	for rows.Next() {
+		var issueID, dependsOnID string
+		if err := rows.Scan(&issueID, &dependsOnID); err != nil {
+			return fmt.Errorf("failed to scan dependency: %w", err)
+		}
+		graph[issueID] = append(graph[issueID], dependsOnID)
 	}
 
-	return n > 0, nil
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("failed to iterate dependency graph: %w", err)
+	}
+	rows.Close()
+
+	hasCycle, cycle := dfs.DetectCycle(graph, dep.IssueID)
+	if hasCycle {
+		slog.Debug("cycle detected, rolling back", "issue_id", dep.IssueID, "depends_on_id", dep.DependsOnID, "cycle", cycle)
+		return fmt.Errorf("dependency would create a cycle: %s", strings.Join(cycle, " -> "))
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit dependency: %w", err)
+	}
+
+	slog.Debug("dependency committed", "issue_id", dep.IssueID, "depends_on_id", dep.DependsOnID)
+
+	return nil
 }
 
 func (r *sqliteRepo) GetDependencyGraph(ctx context.Context) ([]domain.Dependency, error) {
@@ -556,6 +593,25 @@ func (r *sqliteRepo) GetDependencyGraph(ctx context.Context) ([]domain.Dependenc
 	}
 
 	return deps, rows.Err()
+}
+
+func (r *sqliteRepo) RemoveDependency(ctx context.Context, issueID, dependsOnID string) (bool, error) {
+	result, err := r.db.ExecContext(
+		ctx,
+		"DELETE FROM dependencies WHERE issue_id = ? AND depends_on_id = ?",
+		issueID,
+		dependsOnID,
+	)
+	if err != nil {
+		return false, fmt.Errorf("failed to remove dependency: %w", err)
+	}
+
+	n, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("failed to check rows affected: %w", err)
+	}
+
+	return n > 0, nil
 }
 
 func (r *sqliteRepo) GetComments(ctx context.Context, issueID string) ([]domain.Comment, error) {

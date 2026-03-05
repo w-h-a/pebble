@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/w-h-a/bees/internal/client/importer/noop"
 	"github.com/w-h-a/bees/internal/client/repo"
@@ -36,23 +35,23 @@ func TestCreateAndGetIssue(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert: create
-	assert.Contains(t, id, "test-")
-	assert.Len(t, id, 9) // "test-" (5) + 4-char hash
+	require.Contains(t, id, "test-")
+	require.Len(t, id, 9) // "test-" (5) + 4-char hash
 
 	// Act: get by id
 	got, err := svc.GetIssue(ctx, id)
 	require.NoError(t, err)
 
 	// Assert: full issue assembled
-	assert.Equal(t, id, got.ID)
-	assert.Equal(t, "My first task", got.Title)
-	assert.Equal(t, "Some details", got.Description)
-	assert.Equal(t, domain.StatusOpen, got.Status)
-	assert.Equal(t, domain.TypeTask, got.Type)
-	assert.Equal(t, 2, *got.Priority)
-	assert.Equal(t, []string{"backend", "v1"}, got.Labels)
-	assert.False(t, got.CreatedAt.IsZero())
-	assert.False(t, got.UpdatedAt.IsZero())
+	require.Equal(t, id, got.ID)
+	require.Equal(t, "My first task", got.Title)
+	require.Equal(t, "Some details", got.Description)
+	require.Equal(t, domain.StatusOpen, got.Status)
+	require.Equal(t, domain.TypeTask, got.Type)
+	require.Equal(t, 2, *got.Priority)
+	require.Equal(t, []string{"backend", "v1"}, got.Labels)
+	require.False(t, got.CreatedAt.IsZero())
+	require.False(t, got.UpdatedAt.IsZero())
 }
 
 func TestGetIssue_PrefixResolution(t *testing.T) {
@@ -74,7 +73,7 @@ func TestGetIssue_PrefixResolution(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert
-	assert.Equal(t, id, got.ID)
+	require.Equal(t, id, got.ID)
 }
 
 func TestGetIssue_NotFound(t *testing.T) {
@@ -90,8 +89,8 @@ func TestGetIssue_NotFound(t *testing.T) {
 	_, err := svc.GetIssue(ctx, "text-zzzz")
 
 	// Assert
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "no issue found")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "no issue found")
 }
 
 func TestCreateIssue_DefaultsApplied(t *testing.T) {
@@ -110,10 +109,10 @@ func TestCreateIssue_DefaultsApplied(t *testing.T) {
 
 	// Assert: defaults
 	got, err := svc.GetIssue(ctx, id)
-	assert.NoError(t, err)
-	assert.Equal(t, domain.StatusOpen, got.Status)
-	assert.Equal(t, domain.TypeTask, got.Type)
-	assert.Equal(t, 2, *got.Priority)
+	require.NoError(t, err)
+	require.Equal(t, domain.StatusOpen, got.Status)
+	require.Equal(t, domain.TypeTask, got.Type)
+	require.Equal(t, 2, *got.Priority)
 }
 
 func TestListIssues_DefaultsToOpen(t *testing.T) {
@@ -142,8 +141,8 @@ func TestListIssues_DefaultsToOpen(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert: only the open issue
-	assert.Len(t, issues, 1)
-	assert.Equal(t, "Open task", issues[0].Title)
+	require.Len(t, issues, 1)
+	require.Equal(t, "Open task", issues[0].Title)
 }
 
 func TestListIssues_FilterByLabel(t *testing.T) {
@@ -168,8 +167,8 @@ func TestListIssues_FilterByLabel(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert
-	assert.Len(t, issues, 1)
-	assert.Equal(t, "Tagged", issues[0].Title)
+	require.Len(t, issues, 1)
+	require.Equal(t, "Tagged", issues[0].Title)
 }
 
 func TestListIssues_StatusAll(t *testing.T) {
@@ -198,7 +197,7 @@ func TestListIssues_StatusAll(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert: both
-	assert.Len(t, issues, 2)
+	require.Len(t, issues, 2)
 }
 
 func TestListIssues_PopulatesRelations(t *testing.T) {
@@ -239,11 +238,11 @@ func TestListIssues_PopulatesRelations(t *testing.T) {
 	require.NotNil(t, got, "expected issue not found in list")
 
 	// Assert: all three relations populated
-	assert.Equal(t, []string{"backend", "v1"}, got.Labels)
-	assert.Len(t, got.Dependencies, 1)
-	assert.Equal(t, blockerID, got.Dependencies[0].DependsOnID)
-	assert.Len(t, got.Comments, 1)
-	assert.Equal(t, "test comment", got.Comments[0].Body)
+	require.Equal(t, []string{"backend", "v1"}, got.Labels)
+	require.Len(t, got.Dependencies, 1)
+	require.Equal(t, blockerID, got.Dependencies[0].DependsOnID)
+	require.Len(t, got.Comments, 1)
+	require.Equal(t, "test comment", got.Comments[0].Body)
 }
 
 func TestSearchIssues_ByTitle(t *testing.T) {
@@ -266,8 +265,8 @@ func TestSearchIssues_ByTitle(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert
-	assert.Len(t, issues, 1)
-	assert.Equal(t, "Fix login bug", issues[0].Title)
+	require.Len(t, issues, 1)
+	require.Equal(t, "Fix login bug", issues[0].Title)
 }
 
 func TestSearchIssues_ByDescription(t *testing.T) {
@@ -293,8 +292,8 @@ func TestSearchIssues_ByDescription(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert
-	assert.Len(t, issues, 1)
-	assert.Equal(t, "Task A", issues[0].Title)
+	require.Len(t, issues, 1)
+	require.Equal(t, "Task A", issues[0].Title)
 }
 
 func TestSearchIssues_NoResults(t *testing.T) {
@@ -314,7 +313,7 @@ func TestSearchIssues_NoResults(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert
-	assert.Empty(t, issues)
+	require.Empty(t, issues)
 }
 
 func TestSearchIssues_MatchesBothTitleAndDescription(t *testing.T) {
@@ -340,7 +339,7 @@ func TestSearchIssues_MatchesBothTitleAndDescription(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert: both match
-	assert.Len(t, issues, 2)
+	require.Len(t, issues, 2)
 }
 
 func TestSearchIssues_PopulatesRelations(t *testing.T) {
@@ -372,11 +371,11 @@ func TestSearchIssues_PopulatesRelations(t *testing.T) {
 
 	// Assert: relations populated
 	require.Len(t, issues, 1)
-	assert.Equal(t, []string{"api"}, issues[0].Labels)
-	assert.Len(t, issues[0].Dependencies, 1)
-	assert.Equal(t, blockerID, issues[0].Dependencies[0].DependsOnID)
-	assert.Len(t, issues[0].Comments, 1)
-	assert.Equal(t, "search comment", issues[0].Comments[0].Body)
+	require.Equal(t, []string{"api"}, issues[0].Labels)
+	require.Len(t, issues[0].Dependencies, 1)
+	require.Equal(t, blockerID, issues[0].Dependencies[0].DependsOnID)
+	require.Len(t, issues[0].Comments, 1)
+	require.Equal(t, "search comment", issues[0].Comments[0].Body)
 }
 
 func TestUpdateIssue_AppliesChanges(t *testing.T) {
@@ -404,16 +403,16 @@ func TestUpdateIssue_AppliesChanges(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert: returned issue reflects changes
-	assert.Equal(t, "Updated title", updated.Title)
-	assert.Equal(t, 0, *updated.Priority)
-	assert.Equal(t, []string{"urgent", "backend"}, updated.Labels)
+	require.Equal(t, "Updated title", updated.Title)
+	require.Equal(t, 0, *updated.Priority)
+	require.Equal(t, []string{"urgent", "backend"}, updated.Labels)
 
 	// Assert: persisted correctly
 	got, err := svc.GetIssue(ctx, id)
-	assert.NoError(t, err)
-	assert.Equal(t, "Updated title", got.Title)
-	assert.Equal(t, 0, *got.Priority)
-	assert.Equal(t, []string{"backend", "urgent"}, got.Labels)
+	require.NoError(t, err)
+	require.Equal(t, "Updated title", got.Title)
+	require.Equal(t, 0, *got.Priority)
+	require.Equal(t, []string{"backend", "urgent"}, got.Labels)
 }
 
 func TestUpdateIssue_ClosedSetsClosedAt(t *testing.T) {
@@ -435,8 +434,8 @@ func TestUpdateIssue_ClosedSetsClosedAt(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert
-	assert.Equal(t, domain.StatusClosed, updated.Status)
-	assert.NotNil(t, updated.ClosedAt)
+	require.Equal(t, domain.StatusClosed, updated.Status)
+	require.NotNil(t, updated.ClosedAt)
 }
 
 func TestUpdateIssue_PrefixResolution(t *testing.T) {
@@ -459,8 +458,8 @@ func TestUpdateIssue_PrefixResolution(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert
-	assert.Equal(t, id, updated.ID)
-	assert.Equal(t, "Updated via prefix", updated.Title)
+	require.Equal(t, id, updated.ID)
+	require.Equal(t, "Updated via prefix", updated.Title)
 }
 
 func TestUpdateIssue_UnchangedFieldsPreserved(t *testing.T) {
@@ -487,9 +486,9 @@ func TestUpdateIssue_UnchangedFieldsPreserved(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert: other fields untouched
-	assert.Equal(t, "New title", updated.Title)
-	assert.Equal(t, "wes", updated.Assignee)
-	assert.Equal(t, 1, *updated.Priority)
+	require.Equal(t, "New title", updated.Title)
+	require.Equal(t, "wes", updated.Assignee)
+	require.Equal(t, 1, *updated.Priority)
 }
 
 func TestCloseIssue(t *testing.T) {
@@ -510,16 +509,16 @@ func TestCloseIssue(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert
-	assert.True(t, changed)
-	assert.Equal(t, domain.StatusClosed, closed.Status)
-	assert.NotNil(t, closed.ClosedAt)
-	assert.Equal(t, []string{"bug"}, closed.Labels)
+	require.True(t, changed)
+	require.Equal(t, domain.StatusClosed, closed.Status)
+	require.NotNil(t, closed.ClosedAt)
+	require.Equal(t, []string{"bug"}, closed.Labels)
 
 	// Assert: persisted
 	got, err := svc.GetIssue(ctx, id)
-	assert.NoError(t, err)
-	assert.Equal(t, domain.StatusClosed, got.Status)
-	assert.NotNil(t, got.ClosedAt)
+	require.NoError(t, err)
+	require.Equal(t, domain.StatusClosed, got.Status)
+	require.NotNil(t, got.ClosedAt)
 }
 
 func TestCloseIssue_AlreadyClosed(t *testing.T) {
@@ -543,8 +542,8 @@ func TestCloseIssue_AlreadyClosed(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert: idempotent
-	assert.False(t, changed)
-	assert.Equal(t, domain.StatusClosed, got.Status)
+	require.False(t, changed)
+	require.Equal(t, domain.StatusClosed, got.Status)
 }
 
 func TestReopenIssue(t *testing.T) {
@@ -568,15 +567,15 @@ func TestReopenIssue(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert
-	assert.True(t, changed)
-	assert.Equal(t, domain.StatusOpen, reopened.Status)
-	assert.Nil(t, reopened.ClosedAt)
+	require.True(t, changed)
+	require.Equal(t, domain.StatusOpen, reopened.Status)
+	require.Nil(t, reopened.ClosedAt)
 
 	// Assert: persisted
 	got, err := svc.GetIssue(ctx, id)
-	assert.NoError(t, err)
-	assert.Equal(t, domain.StatusOpen, got.Status)
-	assert.Nil(t, got.ClosedAt)
+	require.NoError(t, err)
+	require.Equal(t, domain.StatusOpen, got.Status)
+	require.Nil(t, got.ClosedAt)
 }
 
 func TestReopenIssue_AlreadyOpen(t *testing.T) {
@@ -597,8 +596,8 @@ func TestReopenIssue_AlreadyOpen(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert: idempotent
-	assert.False(t, changed)
-	assert.Equal(t, domain.StatusOpen, got.Status)
+	require.False(t, changed)
+	require.Equal(t, domain.StatusOpen, got.Status)
 }
 
 func TestReadyIssues_ExcludesDeferredAndClosed(t *testing.T) {
@@ -634,8 +633,8 @@ func TestReadyIssues_ExcludesDeferredAndClosed(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert: only the undeferred open issue
-	assert.Len(t, issues, 1)
-	assert.Equal(t, "Ready task", issues[0].Title)
+	require.Len(t, issues, 1)
+	require.Equal(t, "Ready task", issues[0].Title)
 }
 
 func TestReadyIssues_IncludesPastDeferred(t *testing.T) {
@@ -660,8 +659,8 @@ func TestReadyIssues_IncludesPastDeferred(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert: past-deferred issue is ready
-	assert.Len(t, issues, 1)
-	assert.Equal(t, "Was deferred", issues[0].Title)
+	require.Len(t, issues, 1)
+	require.Equal(t, "Was deferred", issues[0].Title)
 }
 
 func TestUpcomingIssues_WindowFilter(t *testing.T) {
@@ -700,9 +699,9 @@ func TestUpcomingIssues_WindowFilter(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert: today and soon, not far
-	assert.Len(t, issues, 2)
-	assert.Equal(t, "Today", issues[0].Title)
-	assert.Equal(t, "Soon", issues[1].Title)
+	require.Len(t, issues, 2)
+	require.Equal(t, "Today", issues[0].Title)
+	require.Equal(t, "Soon", issues[1].Title)
 }
 
 func TestUpcomingIssues_ExcludesNoDefer(t *testing.T) {
@@ -723,7 +722,7 @@ func TestUpcomingIssues_ExcludesNoDefer(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert
-	assert.Empty(t, issues)
+	require.Empty(t, issues)
 }
 
 func TestUpcomingIssues_FilterByAssignee(t *testing.T) {
@@ -758,8 +757,8 @@ func TestUpcomingIssues_FilterByAssignee(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert
-	assert.Len(t, issues, 1)
-	assert.Equal(t, "Wes task", issues[0].Title)
+	require.Len(t, issues, 1)
+	require.Equal(t, "Wes task", issues[0].Title)
 }
 
 func TestUpcomingIssues_ExcludesClosed(t *testing.T) {
@@ -788,7 +787,7 @@ func TestUpcomingIssues_ExcludesClosed(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert: closed issue excluded despite defer_until in window
-	assert.Empty(t, issues)
+	require.Empty(t, issues)
 }
 
 func TestAddDependency(t *testing.T) {
@@ -813,13 +812,13 @@ func TestAddDependency(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert
-	assert.Equal(t, aID, blocker)
-	assert.Equal(t, bID, blocked)
+	require.Equal(t, aID, blocker)
+	require.Equal(t, bID, blocked)
 
 	got, err := svc.GetIssue(ctx, bID)
-	assert.NoError(t, err)
-	assert.Len(t, got.Dependencies, 1)
-	assert.Equal(t, aID, got.Dependencies[0].DependsOnID)
+	require.NoError(t, err)
+	require.Len(t, got.Dependencies, 1)
+	require.Equal(t, aID, got.Dependencies[0].DependsOnID)
 }
 
 func TestAddDependency_SelfBlock(t *testing.T) {
@@ -839,8 +838,8 @@ func TestAddDependency_SelfBlock(t *testing.T) {
 	_, _, err = svc.AddDependency(ctx, aID, aID)
 
 	// Assert
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "may not block itself")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "may not block itself")
 }
 
 func TestAddDependency_CycleDetected(t *testing.T) {
@@ -870,17 +869,34 @@ func TestAddDependency_CycleDetected(t *testing.T) {
 	_, _, err = svc.AddDependency(ctx, bID, cID) // B blocks C
 	require.NoError(t, err)
 
+	// Snapshot graph before cycle attempt
+	beforeA, err := svc.GetIssue(ctx, aID)
+	require.NoError(t, err)
+	beforeB, err := svc.GetIssue(ctx, bID)
+	require.NoError(t, err)
+	beforeC, err := svc.GetIssue(ctx, cID)
+	require.NoError(t, err)
+
 	// Act: C blocks A → cycle
 	_, _, err = svc.AddDependency(ctx, cID, aID)
 
-	// Assert
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "would create a cycle")
+	// Assert: error returned
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "would create a cycle")
 
 	// Assert: edge was rolled back
-	got, err := svc.GetIssue(ctx, aID)
-	assert.NoError(t, err)
-	assert.Empty(t, got.Dependencies)
+	afterA, err := svc.GetIssue(ctx, aID)
+	require.NoError(t, err)
+	afterB, err := svc.GetIssue(ctx, bID)
+	require.NoError(t, err)
+	afterC, err := svc.GetIssue(ctx, cID)
+	require.NoError(t, err)
+
+	require.Equal(t, len(beforeA.Dependencies), len(afterA.Dependencies))
+	require.Equal(t, len(beforeB.Dependencies), len(afterB.Dependencies))
+	require.Equal(t, len(beforeC.Dependencies), len(afterC.Dependencies))
+
+	require.Empty(t, afterA.Dependencies)
 }
 
 func TestRemoveDependency(t *testing.T) {
@@ -908,13 +924,13 @@ func TestRemoveDependency(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert
-	assert.True(t, changed)
-	assert.Equal(t, aID, blocker)
-	assert.Equal(t, bID, blocked)
+	require.True(t, changed)
+	require.Equal(t, aID, blocker)
+	require.Equal(t, bID, blocked)
 
 	got, err := svc.GetIssue(ctx, bID)
-	assert.NoError(t, err)
-	assert.Empty(t, got.Dependencies)
+	require.NoError(t, err)
+	require.Empty(t, got.Dependencies)
 }
 
 func TestRemoveDependency_Idempotent(t *testing.T) {
@@ -939,7 +955,7 @@ func TestRemoveDependency_Idempotent(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert
-	assert.False(t, changed)
+	require.False(t, changed)
 }
 
 func TestReadyIssues_ExcludesBlocked(t *testing.T) {
@@ -967,8 +983,8 @@ func TestReadyIssues_ExcludesBlocked(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert: only the blocker is ready
-	assert.Len(t, issues, 1)
-	assert.Equal(t, "Blocker", issues[0].Title)
+	require.Len(t, issues, 1)
+	require.Equal(t, "Blocker", issues[0].Title)
 }
 
 func TestAddComment(t *testing.T) {
@@ -989,17 +1005,17 @@ func TestAddComment(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert: returned comment
-	assert.Equal(t, id, comment.IssueID)
-	assert.Equal(t, "wes", comment.Author)
-	assert.Equal(t, "looks good", comment.Body)
-	assert.NotZero(t, comment.ID)
-	assert.False(t, comment.CreatedAt.IsZero())
+	require.Equal(t, id, comment.IssueID)
+	require.Equal(t, "wes", comment.Author)
+	require.Equal(t, "looks good", comment.Body)
+	require.NotZero(t, comment.ID)
+	require.False(t, comment.CreatedAt.IsZero())
 
 	// Assert: visible in GetIssue
 	got, err := svc.GetIssue(ctx, id)
-	assert.NoError(t, err)
-	assert.Len(t, got.Comments, 1)
-	assert.Equal(t, "looks good", got.Comments[0].Body)
+	require.NoError(t, err)
+	require.Len(t, got.Comments, 1)
+	require.Equal(t, "looks good", got.Comments[0].Body)
 }
 
 func TestAddComment_PrefixResolution(t *testing.T) {
@@ -1021,8 +1037,8 @@ func TestAddComment_PrefixResolution(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert
-	assert.Equal(t, id, comment.IssueID)
-	assert.Equal(t, "via prefix", comment.Body)
+	require.Equal(t, id, comment.IssueID)
+	require.Equal(t, "via prefix", comment.Body)
 }
 
 func TestAddComment_NotFound(t *testing.T) {
@@ -1038,8 +1054,8 @@ func TestAddComment_NotFound(t *testing.T) {
 	_, err := svc.AddComment(ctx, "test-zzzz", "", "orphan")
 
 	// Assert
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "no issue found")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "no issue found")
 }
 
 func setupService(t *testing.T) *Service {

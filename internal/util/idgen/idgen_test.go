@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGenerate_Format(t *testing.T) {
@@ -23,8 +23,8 @@ func TestGenerate_Format(t *testing.T) {
 	id := Generate("pb", "test title", "test desc", 0)
 
 	// Assert
-	assert.Contains(t, id, "pb-")
-	assert.Len(t, id, 7)
+	require.Contains(t, id, "pb-")
+	require.Len(t, id, 7)
 }
 
 func TestGenerate_Deterministic(t *testing.T) {
@@ -42,7 +42,7 @@ func TestGenerate_Deterministic(t *testing.T) {
 	b := Generate("pb", "title", "desc", 0)
 
 	// Assert
-	assert.Equal(t, a, b)
+	require.Equal(t, a, b)
 }
 
 func TestGenerate_NonceChangesSuffix(t *testing.T) {
@@ -60,7 +60,7 @@ func TestGenerate_NonceChangesSuffix(t *testing.T) {
 	b := Generate("pb", "title", "desc", 1)
 
 	// Assert
-	assert.NotEqual(t, a, b)
+	require.NotEqual(t, a, b)
 }
 
 func TestGenerate_DifferentPrefixes(t *testing.T) {
@@ -78,6 +78,6 @@ func TestGenerate_DifferentPrefixes(t *testing.T) {
 	b := Generate("xx", "title", "desc", 0)
 
 	// Assert
-	assert.NotEqual(t, a, b)
-	assert.True(t, strings.HasPrefix(b, "xx-"))
+	require.NotEqual(t, a, b)
+	require.True(t, strings.HasPrefix(b, "xx-"))
 }

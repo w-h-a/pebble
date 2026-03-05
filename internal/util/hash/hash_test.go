@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFieldsDeterministic(t *testing.T) {
@@ -24,7 +24,7 @@ func TestFieldsDeterministic(t *testing.T) {
 	h2 := Fields(fields)
 
 	// Assert
-	assert.Equal(t, h1, h2)
+	require.Equal(t, h1, h2)
 }
 
 func TestFieldsOrderIndependent(t *testing.T) {
@@ -41,7 +41,7 @@ func TestFieldsOrderIndependent(t *testing.T) {
 	h2 := Fields(b)
 
 	// Assert
-	assert.Equal(t, h1, h2)
+	require.Equal(t, h1, h2)
 }
 
 func TestFieldsDifferentValues(t *testing.T) {
@@ -58,5 +58,5 @@ func TestFieldsDifferentValues(t *testing.T) {
 	h2 := Fields(b)
 
 	// Assert
-	assert.NotEqual(t, h1, h2)
+	require.NotEqual(t, h1, h2)
 }
