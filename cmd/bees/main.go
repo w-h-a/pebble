@@ -29,7 +29,7 @@ func newRootCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "bees",
-		Short: "A minimal task tracker for developers who pair with agentic navigators.",
+		Short: "An alternative to a sea of .md files for developers who pair with agentic navigators.",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if verbose || os.Getenv("BEES_DEBUG") == "1" {
 				opts := &slog.HandlerOptions{
