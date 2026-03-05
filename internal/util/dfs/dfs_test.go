@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDetectCycle_EmptyGraph(t *testing.T) {
@@ -16,8 +16,8 @@ func TestDetectCycle_EmptyGraph(t *testing.T) {
 	hasCycle, cycle := DetectCycle(nil, "a")
 
 	// Assert
-	assert.False(t, hasCycle)
-	assert.Empty(t, cycle)
+	require.False(t, hasCycle)
+	require.Empty(t, cycle)
 }
 
 func TestDetectCycle_LinearChain(t *testing.T) {
@@ -35,8 +35,8 @@ func TestDetectCycle_LinearChain(t *testing.T) {
 	hasCycle, cycle := DetectCycle(graph, "a")
 
 	// Assert
-	assert.False(t, hasCycle)
-	assert.Empty(t, cycle)
+	require.False(t, hasCycle)
+	require.Empty(t, cycle)
 }
 
 func TestDetectCycle_Diamond(t *testing.T) {
@@ -55,8 +55,8 @@ func TestDetectCycle_Diamond(t *testing.T) {
 	hasCycle, cycle := DetectCycle(graph, "a")
 
 	// Assert
-	assert.False(t, hasCycle)
-	assert.Empty(t, cycle)
+	require.False(t, hasCycle)
+	require.Empty(t, cycle)
 }
 
 func TestDetectCycle_TwoNode(t *testing.T) {
@@ -74,8 +74,8 @@ func TestDetectCycle_TwoNode(t *testing.T) {
 	hasCycle, cycle := DetectCycle(graph, "a")
 
 	// Assert
-	assert.True(t, hasCycle)
-	assert.Equal(t, []string{"a", "b", "a"}, cycle)
+	require.True(t, hasCycle)
+	require.Equal(t, []string{"a", "b", "a"}, cycle)
 }
 
 func TestDetectCycle_ThreeNode(t *testing.T) {
@@ -94,8 +94,8 @@ func TestDetectCycle_ThreeNode(t *testing.T) {
 	hasCycle, cycle := DetectCycle(graph, "a")
 
 	// Assert
-	assert.True(t, hasCycle)
-	assert.Equal(t, []string{"a", "b", "c", "a"}, cycle)
+	require.True(t, hasCycle)
+	require.Equal(t, []string{"a", "b", "c", "a"}, cycle)
 }
 
 func TestDetectCycle_CycleNotInvolvingStart(t *testing.T) {
@@ -114,8 +114,8 @@ func TestDetectCycle_CycleNotInvolvingStart(t *testing.T) {
 	hasCycle, cycle := DetectCycle(graph, "a")
 
 	// Assert
-	assert.True(t, hasCycle)
-	assert.Equal(t, []string{"b", "c", "b"}, cycle)
+	require.True(t, hasCycle)
+	require.Equal(t, []string{"b", "c", "b"}, cycle)
 }
 
 func TestDetectCycle_StartNotInGraph(t *testing.T) {
@@ -132,6 +132,6 @@ func TestDetectCycle_StartNotInGraph(t *testing.T) {
 	hasCycle, cycle := DetectCycle(graph, "a")
 
 	// Assert
-	assert.False(t, hasCycle)
-	assert.Empty(t, cycle)
+	require.False(t, hasCycle)
+	require.Empty(t, cycle)
 }

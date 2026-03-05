@@ -5,13 +5,11 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/w-h-a/bees/internal/client/importer"
 	"github.com/w-h-a/bees/internal/client/repo"
 	"github.com/w-h-a/bees/internal/domain"
-	"github.com/w-h-a/bees/internal/util/dfs"
 	"github.com/w-h-a/bees/internal/util/hash"
 	"github.com/w-h-a/bees/internal/util/idgen"
 )
@@ -529,23 +527,8 @@ func (s *Service) AddDependency(ctx context.Context, blockerIDOrPrefix, blockedI
 		CreatedAt:   time.Now(),
 	}
 
-	if err := s.repo.AddDependency(ctx, dep); err != nil {
+	if err := s.repo.AddDependencyIfAcyclic(ctx, dep); err != nil {
 		return "", "", fmt.Errorf("failed to add dependency: %w", err)
-	}
-
-	hasCycle, cycle, err := s.detectCycle(ctx, blockedID)
-	if err != nil {
-		if _, err := s.repo.RemoveDependency(ctx, blockedID, blockerID); err != nil {
-			return "", "", fmt.Errorf("failed to check for cycles and remove dependency: %w", err)
-		}
-		return "", "", fmt.Errorf("failed to check for cycles: %w", err)
-	}
-
-	if hasCycle {
-		if _, err := s.repo.RemoveDependency(ctx, blockedID, blockerID); err != nil {
-			return "", "", fmt.Errorf("cycle detected and failed to remove dependency: %w", err)
-		}
-		return "", "", fmt.Errorf("dependency would create a cycle: %s", strings.Join(cycle, " -> "))
 	}
 
 	slog.Debug("dependency added", "blocker", blockerID, "blocked", blockedID)
@@ -602,22 +585,6 @@ func (s *Service) AddComment(ctx context.Context, idOrPrefix string, author stri
 	slog.Debug("comment added", "id", comment.ID, "issue_id", fullID)
 
 	return comment, nil
-}
-
-func (s *Service) detectCycle(ctx context.Context, startID string) (bool, []string, error) {
-	deps, err := s.repo.GetDependencyGraph(ctx)
-	if err != nil {
-		return false, nil, err
-	}
-
-	graph := map[string][]string{}
-	for _, d := range deps {
-		graph[d.IssueID] = append(graph[d.IssueID], d.DependsOnID)
-	}
-
-	hasCycle, cycle := dfs.DetectCycle(graph, startID)
-
-	return hasCycle, cycle, nil
 }
 
 func (s *Service) populateRelations(ctx context.Context, issues []domain.Issue) error {
