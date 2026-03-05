@@ -142,7 +142,12 @@ func printIssueTable(issues []domain.Issue) {
 			title = title[:47] + "..."
 		}
 
-		fmt.Printf("%-14s %-4s %s %s %s\n", issue.ID, pri, typeStr, statusStr, title)
+		est := ""
+		if issue.EstimateMins > 0 {
+			est = dimStyle.Render(fmt.Sprintf("  %dm", issue.EstimateMins))
+		}
+
+		fmt.Printf("%-14s %-4s %s %s %s%s\n", issue.ID, pri, typeStr, statusStr, title, est)
 	}
 
 	fmt.Printf("\n%s\n", dimStyle.Render(fmt.Sprintf("%d issue(s)", len(issues))))
