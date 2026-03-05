@@ -12,6 +12,36 @@
 
 Bees follows Beads as an alternative to a sea of .md files and drops everything else.
 
+## Install      
+            
+```sh                                                                                
+go install github.com/w-h-a/bees/cmd/bees@latest                                                                       
+```                                                                                                        
+
+## Quick Start
+
+```sh
+bees init --prefix PROJ              # create a bees.db in the current repo
+bees create "Design auth flow" \
+  --type task --priority 2           # create an issue
+bees list --status open              # see all open issues
+bees update PROJ-xxx --assignee me   # assign and refine
+bees ready                           # what should I work on next?
+```
+
+## Commands
+
+```text
+bees init [--stealth] [--prefix]     bees ready [--sort --limit]
+bees create "title" [flags]          bees upcoming [--days --assignee]
+bees show <id>                       bees search <query>
+bees update <id> [flags]             bees dep add <id> --blocks <id>
+bees close <id>                      bees dep remove <id> <id>
+bees reopen <id>                     bees comment <id> "text"
+bees list [--status --type ...]      bees config set|get|list
+bees import <file.jsonl>             bees version
+```
+
 ## Architecture
 
 ### Flowchart
@@ -88,19 +118,4 @@ erDiagram
   issues ||--o{ dependencies : "blocked by"
   issues ||--o{ labels : has
   issues ||--o{ comments : has
-```
-
-## Usage
-
-```text
-bees init [--stealth] [--prefix]      bees ready [--sort --limit]
-bees create "title" [flags]           bees upcoming [--days --assignee]
-bees show <id>                        bees search <query>
-bees update <id> [flags]              bees dep add <id> --blocks <id>
-bees close <id>                       bees dep remove <id> <id>
-bees reopen <id>                      bees comment <id> "text"
-bees delete <id>                      bees stale [--days]
-bees list [--status --type ...]       bees config set|get|list
-bees export [-o file.jsonl]           bees version
-bees import <file.jsonl>
 ```
