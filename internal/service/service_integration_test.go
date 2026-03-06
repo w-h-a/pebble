@@ -115,6 +115,60 @@ func TestCreateIssue_DefaultsApplied(t *testing.T) {
 	require.Equal(t, 2, *got.Priority)
 }
 
+func TestCreateIssue_RejectsPriorityBelowRange(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+	p := -1
+
+	// Act
+	_, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Bad priority", Priority: &p})
+
+	// Assert
+	require.Error(t, err)
+}
+
+func TestCreateIssue_RejectsPriorityAboveRange(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+	p := 5
+
+	// Act
+	_, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Bad priority", Priority: &p})
+
+	// Assert
+	require.Error(t, err)
+}
+
+func TestCreateIssue_AcceptsBoundaryPriorities(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	// Act & Assert: priority 0 succeeds
+	p0 := 0
+	_, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Priority zero", Priority: &p0})
+	require.NoError(t, err)
+
+	// Act & Assert: priority 4 succeeds
+	p4 := 4
+	_, err = svc.CreateIssue(ctx, &domain.Issue{Title: "Priority four", Priority: &p4})
+	require.NoError(t, err)
+}
+
 func TestListIssues_DefaultsToOpen(t *testing.T) {
 	if os.Getenv("INTEGRATION") == "" {
 		t.Skip("set INTEGRATION=1 to run")
@@ -523,6 +577,34 @@ func TestUpdateIssue_UnchangedFieldsPreserved(t *testing.T) {
 	require.Equal(t, "New title", updated.Title)
 	require.Equal(t, "wes", updated.Assignee)
 	require.Equal(t, 1, *updated.Priority)
+}
+
+func TestUpdateIssue_RejectsPriorityOutOfRange(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	id, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Valid issue"})
+	require.NoError(t, err)
+
+	// Act & Assert: priority -1 fails
+	pNeg := -1
+	_, err = svc.UpdateIssue(ctx, id, domain.IssueUpdate{Priority: &pNeg})
+	require.Error(t, err)
+
+	// Act & Assert: priority 5 fails
+	p5 := 5
+	_, err = svc.UpdateIssue(ctx, id, domain.IssueUpdate{Priority: &p5})
+	require.Error(t, err)
+
+	// Assert: issue unchanged
+	got, err := svc.GetIssue(ctx, id)
+	require.NoError(t, err)
+	require.Equal(t, 2, *got.Priority)
 }
 
 func TestCloseIssue(t *testing.T) {

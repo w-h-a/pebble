@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"time"
 
@@ -45,6 +46,10 @@ func newCreateCmd() *cobra.Command {
 			}
 
 			if cmd.Flags().Changed("priority") {
+				if priority < 0 || priority > 4 {
+					slog.Debug("priority validation failed", "attempted", priority)
+					return fmt.Errorf("invalid priority %d: must be between 0 and 4", priority)
+				}
 				issue.Priority = &priority
 			}
 

@@ -124,6 +124,11 @@ func (s *Service) ImportIssues(ctx context.Context, r io.Reader) (ImportResult, 
 func (s *Service) CreateIssue(ctx context.Context, issue *domain.Issue) (string, error) {
 	issue.SetDefaults()
 
+	if *issue.Priority < 0 || *issue.Priority > 4 {
+		slog.Debug("priority validation failed", "attempted", *issue.Priority)
+		return "", fmt.Errorf("invalid priority %d: must be between 0 and 4", *issue.Priority)
+	}
+
 	slog.Debug("creating issue",
 		"title", issue.Title,
 		"type", string(issue.Type),
@@ -304,6 +309,10 @@ func (s *Service) UpdateIssue(ctx context.Context, idOrPrefix string, update dom
 	}
 
 	if update.Priority != nil {
+		if *update.Priority < 0 || *update.Priority > 4 {
+			slog.Debug("priority validation failed", "attempted", *update.Priority)
+			return nil, fmt.Errorf("invalid priority %d: must be between 0 and 4", *update.Priority)
+		}
 		issue.Priority = update.Priority
 		changed = append(changed, "priority")
 	}
