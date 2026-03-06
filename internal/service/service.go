@@ -341,6 +341,11 @@ func (s *Service) UpdateIssue(ctx context.Context, idOrPrefix string, update dom
 		changed = append(changed, "closed_at")
 	}
 
+	if issue.Status != domain.StatusClosed && issue.ClosedAt != nil {
+		issue.ClosedAt = nil
+		changed = append(changed, "closed_at")
+	}
+
 	if update.Labels != nil {
 		issue.Labels = *update.Labels
 		changed = append(changed, "labels")

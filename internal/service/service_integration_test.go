@@ -438,6 +438,40 @@ func TestUpdateIssue_ClosedSetsClosedAt(t *testing.T) {
 	require.NotNil(t, updated.ClosedAt)
 }
 
+func TestUpdateIssue_ReopenClearsClosedAt(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	issue := &domain.Issue{Title: "Will reopen via update"}
+	id, err := svc.CreateIssue(ctx, issue)
+	require.NoError(t, err)
+
+	closedStatus := domain.StatusClosed
+	closed, err := svc.UpdateIssue(ctx, id, domain.IssueUpdate{Status: &closedStatus})
+	require.NoError(t, err)
+	require.NotNil(t, closed.ClosedAt)
+
+	// Act
+	openStatus := domain.StatusOpen
+	updated, err := svc.UpdateIssue(ctx, id, domain.IssueUpdate{Status: &openStatus})
+	require.NoError(t, err)
+
+	// Assert: returned issue has no ClosedAt
+	require.Equal(t, domain.StatusOpen, updated.Status)
+	require.Nil(t, updated.ClosedAt)
+
+	// Assert: persisted correctly
+	got, err := svc.GetIssue(ctx, id)
+	require.NoError(t, err)
+	require.Equal(t, domain.StatusOpen, got.Status)
+	require.Nil(t, got.ClosedAt)
+}
+
 func TestUpdateIssue_PrefixResolution(t *testing.T) {
 	if os.Getenv("INTEGRATION") == "" {
 		t.Skip("set INTEGRATION=1 to run")
