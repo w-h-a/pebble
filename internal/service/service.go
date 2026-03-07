@@ -135,6 +135,19 @@ func (s *Service) CreateIssue(ctx context.Context, issue *domain.Issue) (string,
 		return "", fmt.Errorf("invalid priority %d: must be between 0 and 4", *issue.Priority)
 	}
 
+	if issue.Labels != nil {
+		filtered := make([]string, 0, len(issue.Labels))
+		for _, l := range issue.Labels {
+			if strings.TrimSpace(l) != "" {
+				filtered = append(filtered, l)
+			}
+		}
+		if len(filtered) != len(issue.Labels) {
+			slog.Debug("empty labels filtered", "original_count", len(issue.Labels), "filtered_count", len(filtered))
+		}
+		issue.Labels = filtered
+	}
+
 	slog.Debug("creating issue",
 		"title", issue.Title,
 		"type", string(issue.Type),
@@ -362,7 +375,16 @@ func (s *Service) UpdateIssue(ctx context.Context, idOrPrefix string, update dom
 	}
 
 	if update.Labels != nil {
-		issue.Labels = *update.Labels
+		filtered := make([]string, 0, len(*update.Labels))
+		for _, l := range *update.Labels {
+			if strings.TrimSpace(l) != "" {
+				filtered = append(filtered, l)
+			}
+		}
+		if len(filtered) != len(*update.Labels) {
+			slog.Debug("empty labels filtered", "original_count", len(*update.Labels), "filtered_count", len(filtered))
+		}
+		issue.Labels = filtered
 		changed = append(changed, "labels")
 	}
 

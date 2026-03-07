@@ -220,6 +220,46 @@ func TestCreateIssue_AcceptsSingleCharTitle(t *testing.T) {
 	require.NotEmpty(t, id)
 }
 
+func TestCreateIssue_EmptyLabelIgnored(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	// Act: create with a single empty-string label
+	issue := &domain.Issue{Title: "Empty label create", Labels: []string{""}}
+	id, err := svc.CreateIssue(ctx, issue)
+	require.NoError(t, err)
+
+	// Assert: no labels persisted
+	got, err := svc.GetIssue(ctx, id)
+	require.NoError(t, err)
+	require.Empty(t, got.Labels)
+}
+
+func TestCreateIssue_FiltersEmptyLabels(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	// Act: create with mix of valid and empty labels
+	issue := &domain.Issue{Title: "Mixed label create", Labels: []string{"valid", "", " "}}
+	id, err := svc.CreateIssue(ctx, issue)
+	require.NoError(t, err)
+
+	// Assert: only "valid" persisted
+	got, err := svc.GetIssue(ctx, id)
+	require.NoError(t, err)
+	require.Equal(t, []string{"valid"}, got.Labels)
+}
+
 func TestListIssues_DefaultsToOpen(t *testing.T) {
 	if os.Getenv("INTEGRATION") == "" {
 		t.Skip("set INTEGRATION=1 to run")
@@ -656,6 +696,54 @@ func TestUpdateIssue_RejectsPriorityOutOfRange(t *testing.T) {
 	got, err := svc.GetIssue(ctx, id)
 	require.NoError(t, err)
 	require.Equal(t, 2, *got.Priority)
+}
+
+func TestUpdateIssue_EmptyLabelClearsAll(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	issue := &domain.Issue{Title: "Label test", Labels: []string{"a", "b"}}
+	id, err := svc.CreateIssue(ctx, issue)
+	require.NoError(t, err)
+
+	// Act: update with a single empty string (simulates --label '')
+	empty := []string{""}
+	_, err = svc.UpdateIssue(ctx, id, domain.IssueUpdate{Labels: &empty})
+	require.NoError(t, err)
+
+	// Assert: issue has zero labels, not one empty-string label
+	got, err := svc.GetIssue(ctx, id)
+	require.NoError(t, err)
+	require.Empty(t, got.Labels)
+}
+
+func TestUpdateIssue_FiltersEmptyLabels(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	issue := &domain.Issue{Title: "Mixed labels"}
+	id, err := svc.CreateIssue(ctx, issue)
+	require.NoError(t, err)
+
+	// Act: update with mix of valid and empty labels
+	mixed := []string{"x", "", " "}
+	_, err = svc.UpdateIssue(ctx, id, domain.IssueUpdate{Labels: &mixed})
+	require.NoError(t, err)
+
+	// Assert: only "x" survives
+	got, err := svc.GetIssue(ctx, id)
+	require.NoError(t, err)
+	require.Equal(t, []string{"x"}, got.Labels)
 }
 
 func TestCloseIssue(t *testing.T) {
