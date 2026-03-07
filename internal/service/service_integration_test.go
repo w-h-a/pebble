@@ -260,6 +260,54 @@ func TestCreateIssue_FiltersEmptyLabels(t *testing.T) {
 	require.Equal(t, []string{"valid"}, got.Labels)
 }
 
+func TestCreateIssue_RejectsNonexistentParent(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	// Act
+	badParent := "nonexistent-id"
+	_, err := svc.CreateIssue(ctx, &domain.Issue{
+		Title:    "Child with bad parent",
+		ParentID: &badParent,
+	})
+
+	// Assert
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "nonexistent-id")
+	require.Contains(t, err.Error(), "not found")
+}
+
+func TestCreateIssue_AcceptsValidParent(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	parentID, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Parent"})
+	require.NoError(t, err)
+
+	// Act
+	childID, err := svc.CreateIssue(ctx, &domain.Issue{
+		Title:    "Child",
+		ParentID: &parentID,
+	})
+	require.NoError(t, err)
+
+	// Assert
+	got, err := svc.GetIssue(ctx, childID)
+	require.NoError(t, err)
+	require.NotNil(t, got.ParentID)
+	require.Equal(t, parentID, *got.ParentID)
+}
+
 func TestListIssues_DefaultsToOpen(t *testing.T) {
 	if os.Getenv("INTEGRATION") == "" {
 		t.Skip("set INTEGRATION=1 to run")
@@ -744,6 +792,63 @@ func TestUpdateIssue_FiltersEmptyLabels(t *testing.T) {
 	got, err := svc.GetIssue(ctx, id)
 	require.NoError(t, err)
 	require.Equal(t, []string{"x"}, got.Labels)
+}
+
+func TestUpdateIssue_RejectsNonexistentParent(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	id, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Existing issue"})
+	require.NoError(t, err)
+
+	// Act
+	badParent := "nonexistent-id"
+	_, err = svc.UpdateIssue(ctx, id, domain.IssueUpdate{ParentID: &badParent})
+
+	// Assert
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "nonexistent-id")
+	require.Contains(t, err.Error(), "not found")
+
+	// Assert: parent_id unchanged
+	got, err := svc.GetIssue(ctx, id)
+	require.NoError(t, err)
+	require.Nil(t, got.ParentID)
+}
+
+func TestUpdateIssue_AcceptsValidParent(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	parentID, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Parent"})
+	require.NoError(t, err)
+
+	childID, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Child"})
+	require.NoError(t, err)
+
+	// Act
+	updated, err := svc.UpdateIssue(ctx, childID, domain.IssueUpdate{ParentID: &parentID})
+	require.NoError(t, err)
+
+	// Assert
+	require.NotNil(t, updated.ParentID)
+	require.Equal(t, parentID, *updated.ParentID)
+
+	// Assert: persisted
+	got, err := svc.GetIssue(ctx, childID)
+	require.NoError(t, err)
+	require.NotNil(t, got.ParentID)
+	require.Equal(t, parentID, *got.ParentID)
 }
 
 func TestCloseIssue(t *testing.T) {
