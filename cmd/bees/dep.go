@@ -7,7 +7,6 @@ import (
 	"sort"
 
 	"github.com/spf13/cobra"
-	"github.com/w-h-a/bees/internal/domain"
 )
 
 func newDepCmd() *cobra.Command {
@@ -110,35 +109,10 @@ func newDepGraphCmd() *cobra.Command {
 				id = &args[0]
 			}
 
-			graph, err := svc.BuildGraph(cmd.Context(), id)
+			graph, err := svc.BuildGraph(cmd.Context(), id, status)
 			if err != nil {
 				return err
 			}
-
-			for id, n := range graph.Nodes {
-				switch status {
-				case "all":
-				case "":
-					if n.Status == domain.StatusClosed {
-						delete(graph.Nodes, id)
-					}
-				default:
-					if string(n.Status) != status {
-						delete(graph.Nodes, id)
-					}
-				}
-			}
-			filtered := make([]domain.Edge, 0, len(graph.Edges))
-			for _, e := range graph.Edges {
-				if _, fromOk := graph.Nodes[e.From]; !fromOk {
-					continue
-				}
-				if _, toOk := graph.Nodes[e.To]; !toOk {
-					continue
-				}
-				filtered = append(filtered, e)
-			}
-			graph.Edges = filtered
 
 			if !jsonOutput {
 				printGraph(graph)

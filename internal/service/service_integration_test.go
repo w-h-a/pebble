@@ -1369,7 +1369,7 @@ func TestBuildGraph_FullGraph(t *testing.T) {
 	require.NoError(t, err)
 
 	// Act
-	graph, err := svc.BuildGraph(ctx, nil)
+	graph, err := svc.BuildGraph(ctx, nil, "")
 	require.NoError(t, err)
 
 	// Assert
@@ -1409,7 +1409,7 @@ func TestBuildGraph_ScopedToID(t *testing.T) {
 	require.NoError(t, err)
 
 	// Act
-	graph, err := svc.BuildGraph(ctx, &aID)
+	graph, err := svc.BuildGraph(ctx, &aID, "")
 	require.NoError(t, err)
 
 	// Assert
@@ -1432,7 +1432,7 @@ func TestBuildGraph_EmptyGraph(t *testing.T) {
 	ctx := context.Background()
 
 	// Act
-	graph, err := svc.BuildGraph(ctx, nil)
+	graph, err := svc.BuildGraph(ctx, nil, "")
 	require.NoError(t, err)
 
 	// Assert
@@ -1469,7 +1469,7 @@ func TestBuildGraph_NodeFields(t *testing.T) {
 	require.NoError(t, err)
 
 	// Act
-	graph, err := svc.BuildGraph(ctx, nil)
+	graph, err := svc.BuildGraph(ctx, nil, "")
 	require.NoError(t, err)
 
 	// Assert
@@ -1483,6 +1483,99 @@ func TestBuildGraph_NodeFields(t *testing.T) {
 	require.Equal(t, domain.TypeChore, nodeB.Type)
 	require.Nil(t, nodeB.DeferUntil)
 	require.Equal(t, 20, nodeB.EstimateMins)
+}
+
+func TestBuildGraph_DefaultExcludesClosed(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	aID, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Open issue"})
+	require.NoError(t, err)
+	bID, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Closed issue"})
+	require.NoError(t, err)
+
+	_, _, err = svc.AddDependency(ctx, aID, bID)
+	require.NoError(t, err)
+
+	_, _, err = svc.CloseIssue(ctx, bID)
+	require.NoError(t, err)
+
+	// Act
+	graph, err := svc.BuildGraph(ctx, nil, "")
+	require.NoError(t, err)
+
+	// Assert: closed node excluded
+	require.Len(t, graph.Nodes, 1)
+	require.Contains(t, graph.Nodes, aID)
+	require.NotContains(t, graph.Nodes, bID)
+	require.Empty(t, graph.Edges)
+}
+
+func TestBuildGraph_StatusFilter(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	aID, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Open issue"})
+	require.NoError(t, err)
+	bID, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Closed issue"})
+	require.NoError(t, err)
+
+	_, _, err = svc.AddDependency(ctx, aID, bID)
+	require.NoError(t, err)
+
+	_, _, err = svc.CloseIssue(ctx, bID)
+	require.NoError(t, err)
+
+	// Act: filter by "closed"
+	graph, err := svc.BuildGraph(ctx, nil, "closed")
+	require.NoError(t, err)
+
+	// Assert: only closed node
+	require.Len(t, graph.Nodes, 1)
+	require.Contains(t, graph.Nodes, bID)
+	require.NotContains(t, graph.Nodes, aID)
+	require.Empty(t, graph.Edges)
+}
+
+func TestBuildGraph_StatusAll(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	aID, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Open issue"})
+	require.NoError(t, err)
+	bID, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Closed issue"})
+	require.NoError(t, err)
+
+	_, _, err = svc.AddDependency(ctx, aID, bID)
+	require.NoError(t, err)
+
+	_, _, err = svc.CloseIssue(ctx, bID)
+	require.NoError(t, err)
+
+	// Act: pass "all"
+	graph, err := svc.BuildGraph(ctx, nil, "all")
+	require.NoError(t, err)
+
+	// Assert: both nodes present
+	require.Len(t, graph.Nodes, 2)
+	require.Contains(t, graph.Nodes, aID)
+	require.Contains(t, graph.Nodes, bID)
+	require.Len(t, graph.Edges, 1)
 }
 
 func TestReadyIssues_ExcludesBlocked(t *testing.T) {
