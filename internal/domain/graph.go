@@ -1,12 +1,19 @@
 package domain
 
-import "github.com/w-h-a/bees/internal/util/dfs"
+import (
+	"time"
+
+	"github.com/w-h-a/bees/internal/util/dfs"
+)
 
 type Node struct {
-	ID       string
-	Title    string
-	Status   Status
-	Priority int
+	ID           string
+	Title        string
+	Status       Status
+	Priority     int
+	Type         Type
+	DeferUntil   *time.Time
+	EstimateMins int
 }
 
 type Edge struct {
@@ -76,10 +83,13 @@ func BuildGraph(deps []Dependency, issues map[string]Issue) Graph {
 					pri = *entry.iss.Priority
 				}
 				nodes[entry.id] = Node{
-					ID:       entry.id,
-					Title:    entry.iss.Title,
-					Status:   entry.iss.Status,
-					Priority: pri,
+					ID:           entry.id,
+					Title:        entry.iss.Title,
+					Status:       entry.iss.Status,
+					Priority:     pri,
+					Type:         entry.iss.Type,
+					DeferUntil:   entry.iss.DeferUntil,
+					EstimateMins: entry.iss.EstimateMins,
 				}
 			}
 		}

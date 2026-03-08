@@ -3,6 +3,7 @@ package domain
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -15,12 +16,13 @@ func TestBuildGraph_DisconnectedComponents(t *testing.T) {
 	// Arrange
 	p1 := 1
 	p3 := 3
+	defer1 := time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC)
 
 	issues := map[string]Issue{
-		"a": {ID: "a", Title: "Alpha", Status: StatusOpen, Priority: &p1},
-		"b": {ID: "b", Title: "Beta", Status: StatusInProgress, Priority: &p3},
-		"c": {ID: "c", Title: "Charlie", Status: StatusOpen, Priority: &p1},
-		"d": {ID: "d", Title: "Delta", Status: StatusClosed, Priority: &p3},
+		"a": {ID: "a", Title: "Alpha", Status: StatusOpen, Type: TypeTask, Priority: &p1, DeferUntil: &defer1, EstimateMins: 30},
+		"b": {ID: "b", Title: "Beta", Status: StatusInProgress, Type: TypeBug, Priority: &p3, EstimateMins: 60},
+		"c": {ID: "c", Title: "Charlie", Status: StatusOpen, Type: TypeFeature, Priority: &p1, DeferUntil: &defer1},
+		"d": {ID: "d", Title: "Delta", Status: StatusClosed, Type: TypeChore, Priority: &p3},
 	}
 
 	deps := []Dependency{
@@ -35,10 +37,10 @@ func TestBuildGraph_DisconnectedComponents(t *testing.T) {
 	require.Len(t, g.Nodes, 4)
 	require.Len(t, g.Edges, 2)
 
-	require.Equal(t, Node{ID: "a", Title: "Alpha", Status: StatusOpen, Priority: 1}, g.Nodes["a"])
-	require.Equal(t, Node{ID: "b", Title: "Beta", Status: StatusInProgress, Priority: 3}, g.Nodes["b"])
-	require.Equal(t, Node{ID: "c", Title: "Charlie", Status: StatusOpen, Priority: 1}, g.Nodes["c"])
-	require.Equal(t, Node{ID: "d", Title: "Delta", Status: StatusClosed, Priority: 3}, g.Nodes["d"])
+	require.Equal(t, Node{ID: "a", Title: "Alpha", Status: StatusOpen, Priority: 1, Type: TypeTask, DeferUntil: &defer1, EstimateMins: 30}, g.Nodes["a"])
+	require.Equal(t, Node{ID: "b", Title: "Beta", Status: StatusInProgress, Priority: 3, Type: TypeBug, EstimateMins: 60}, g.Nodes["b"])
+	require.Equal(t, Node{ID: "c", Title: "Charlie", Status: StatusOpen, Priority: 1, Type: TypeFeature, DeferUntil: &defer1}, g.Nodes["c"])
+	require.Equal(t, Node{ID: "d", Title: "Delta", Status: StatusClosed, Priority: 3, Type: TypeChore}, g.Nodes["d"])
 
 	require.Contains(t, g.Edges, Edge{From: "a", To: "b"})
 	require.Contains(t, g.Edges, Edge{From: "c", To: "d"})
