@@ -37,9 +37,10 @@ bees create "title" [flags]          bees upcoming [--days --assignee]
 bees show <id>                       bees search <query>
 bees update <id> [flags]             bees dep add <id> --blocks <id>
 bees close <id>                      bees dep remove <id> <id>
-bees reopen <id>                     bees comment <id> "text"
-bees list [--status --type ...]      bees config set|get|list
-bees import <file.jsonl>             bees version
+bees reopen <id>                     bees dep graph [<id>]
+bees list [--status --type ...]      bees comment <id> "text"
+bees import <file.jsonl>             bees config set|get|list
+bees export (coming soon)            bees version
 ```
 
 ## Architecture

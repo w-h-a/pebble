@@ -85,6 +85,7 @@ func newRootCmd() *cobra.Command {
 				"bees upcoming":   true,
 				"bees dep add":    true,
 				"bees dep remove": true,
+				"bees dep graph":  true,
 				"bees comment":    true,
 				"bees import":     true,
 			}
