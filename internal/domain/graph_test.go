@@ -99,3 +99,84 @@ func TestBuildGraph_EmptyInput(t *testing.T) {
 	require.Empty(t, g.Nodes)
 	require.Empty(t, g.Edges)
 }
+
+func TestFilterByStatus_DefaultExcludesClosed(t *testing.T) {
+	if len(os.Getenv("INTEGRATION")) > 0 {
+		t.Skip()
+	}
+
+	// Arrange
+	g := Graph{
+		Nodes: map[string]Node{
+			"a": {ID: "a", Status: StatusOpen},
+			"b": {ID: "b", Status: StatusClosed},
+			"c": {ID: "c", Status: StatusOpen},
+		},
+		Edges: []Edge{
+			{From: "a", To: "b"},
+			{From: "a", To: "c"},
+		},
+	}
+
+	// Act
+	filtered := g.FilterByStatus("")
+
+	// Assert
+	require.Len(t, filtered.Nodes, 2)
+	require.Contains(t, filtered.Nodes, "a")
+	require.Contains(t, filtered.Nodes, "c")
+	require.NotContains(t, filtered.Nodes, "b")
+	require.Len(t, filtered.Edges, 1)
+	require.Equal(t, Edge{From: "a", To: "c"}, filtered.Edges[0])
+}
+
+func TestFilterByStatus_SpecificStatus(t *testing.T) {
+	if len(os.Getenv("INTEGRATION")) > 0 {
+		t.Skip()
+	}
+
+	// Arrange
+	g := Graph{
+		Nodes: map[string]Node{
+			"a": {ID: "a", Status: StatusOpen},
+			"b": {ID: "b", Status: StatusInProgress},
+			"c": {ID: "c", Status: StatusClosed},
+		},
+		Edges: []Edge{
+			{From: "a", To: "b"},
+			{From: "b", To: "c"},
+		},
+	}
+
+	// Act
+	filtered := g.FilterByStatus("in_progress")
+
+	// Assert
+	require.Len(t, filtered.Nodes, 1)
+	require.Contains(t, filtered.Nodes, "b")
+	require.Empty(t, filtered.Edges)
+}
+
+func TestFilterByStatus_All(t *testing.T) {
+	if len(os.Getenv("INTEGRATION")) > 0 {
+		t.Skip()
+	}
+
+	// Arrange
+	g := Graph{
+		Nodes: map[string]Node{
+			"a": {ID: "a", Status: StatusOpen},
+			"b": {ID: "b", Status: StatusClosed},
+		},
+		Edges: []Edge{
+			{From: "a", To: "b"},
+		},
+	}
+
+	// Act
+	filtered := g.FilterByStatus("all")
+
+	// Assert
+	require.Len(t, filtered.Nodes, 2)
+	require.Len(t, filtered.Edges, 1)
+}

@@ -53,6 +53,40 @@ func (g Graph) Subgraph(rootID string) Graph {
 	return Graph{Nodes: nodes, Edges: edges}
 }
 
+func (g Graph) FilterByStatus(status string) Graph {
+	if status == "all" {
+		return g
+	}
+
+	nodes := make(map[string]Node, len(g.Nodes))
+	for id, n := range g.Nodes {
+		switch status {
+		case "":
+			if n.Status == StatusClosed {
+				continue
+			}
+		default:
+			if string(n.Status) != status {
+				continue
+			}
+		}
+		nodes[id] = n
+	}
+
+	edges := make([]Edge, 0, len(g.Edges))
+	for _, e := range g.Edges {
+		if _, fromOk := nodes[e.From]; !fromOk {
+			continue
+		}
+		if _, toOk := nodes[e.To]; !toOk {
+			continue
+		}
+		edges = append(edges, e)
+	}
+
+	return Graph{Nodes: nodes, Edges: edges}
+}
+
 func BuildGraph(deps []Dependency, issues map[string]Issue) Graph {
 	nodes := map[string]Node{}
 	edges := []Edge{}
