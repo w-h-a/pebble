@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -201,4 +202,68 @@ func printUpcomingTable(issues []domain.Issue) {
 	}
 
 	fmt.Printf("\n%s\n", dimStyle.Render(fmt.Sprintf("%d issue(s)", len(issues))))
+}
+
+func printGraph(g domain.Graph) {
+	if len(g.Nodes) == 0 {
+		fmt.Println("No dependencies found.")
+		return
+	}
+
+	children := map[string][]string{}
+	hasParent := map[string]bool{}
+	for _, e := range g.Edges {
+		children[e.From] = append(children[e.From], e.To)
+		hasParent[e.To] = true
+	}
+
+	var roots []string
+	for id := range g.Nodes {
+		if !hasParent[id] {
+			roots = append(roots, id)
+		}
+	}
+	sort.Strings(roots)
+
+	var walk func(id string, prefix string, last bool)
+	walk = func(id string, prefix string, last bool) {
+		n := g.Nodes[id]
+		statusStyle := statusColors[n.Status]
+
+		connector := "├── "
+		if last {
+			connector = "└── "
+		}
+
+		fmt.Printf("%s%s%s %s\n", prefix, connector, statusStyle.Render(id), n.Title)
+
+		next := prefix + "│   "
+		if last {
+			next = prefix + "    "
+		}
+
+		kids := children[id]
+		sort.Strings(kids)
+		for i, kid := range kids {
+			walk(kid, next, i == len(kids)-1)
+		}
+	}
+
+	for i, root := range roots {
+		n := g.Nodes[root]
+		statusStyle := statusColors[n.Status]
+		fmt.Printf("%s %s\n", statusStyle.Render(root), n.Title)
+
+		kids := children[root]
+		sort.Strings(kids)
+		for j, kid := range kids {
+			walk(kid, "", j == len(kids)-1)
+		}
+
+		if i < len(roots)-1 {
+			fmt.Println()
+		}
+	}
+
+	fmt.Printf("\n%s\n", dimStyle.Render(fmt.Sprintf("%d node(s), %d edge(s)", len(g.Nodes), len(g.Edges))))
 }
