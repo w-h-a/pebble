@@ -1150,6 +1150,33 @@ func TestUpcomingIssues_ExcludesClosed(t *testing.T) {
 	require.Empty(t, issues)
 }
 
+func TestUpcomingIssues_IncludesType(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	tomorrow := time.Now().AddDate(0, 0, 1)
+
+	issue := &domain.Issue{Title: "Feature task", Type: domain.TypeFeature}
+	id, err := svc.CreateIssue(ctx, issue)
+	require.NoError(t, err)
+
+	_, err = svc.UpdateIssue(ctx, id, domain.IssueUpdate{DeferUntil: &tomorrow})
+	require.NoError(t, err)
+
+	// Act
+	issues, err := svc.UpcomingIssues(ctx, 7, "")
+	require.NoError(t, err)
+
+	// Assert
+	require.Len(t, issues, 1)
+	require.Equal(t, domain.TypeFeature, issues[0].Type)
+}
+
 func TestAddDependency(t *testing.T) {
 	if os.Getenv("INTEGRATION") == "" {
 		t.Skip("set INTEGRATION=1 to run")

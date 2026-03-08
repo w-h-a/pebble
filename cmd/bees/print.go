@@ -187,6 +187,7 @@ func printUpcomingTable(issues []domain.Issue) {
 			bullet = "●"
 		}
 		bullet = statusStyle.Render(bullet)
+		typeStr := dimStyle.Render(fmt.Sprintf("%-10s", string(issue.Type)))
 
 		title := issue.Title
 		if len(title) > 50 {
@@ -198,7 +199,7 @@ func printUpcomingTable(issues []domain.Issue) {
 			est = dimStyle.Render(fmt.Sprintf("  %dm", issue.EstimateMins))
 		}
 
-		fmt.Printf("  %s %-4s %-14s %s%s\n", bullet, pri, issue.ID, title, est)
+		fmt.Printf("  %s %-4s %s %-14s %s%s\n", bullet, pri, typeStr, issue.ID, title, est)
 	}
 
 	fmt.Printf("\n%s\n", dimStyle.Render(fmt.Sprintf("%d issue(s)", len(issues))))
