@@ -98,6 +98,8 @@ func newDepRemoveCmd() *cobra.Command {
 }
 
 func newDepGraphCmd() *cobra.Command {
+	var status string
+
 	cmd := &cobra.Command{
 		Use:   "graph [<id>]",
 		Short: "Show the dependency graph",
@@ -114,8 +116,16 @@ func newDepGraphCmd() *cobra.Command {
 			}
 
 			for id, n := range graph.Nodes {
-				if n.Status == domain.StatusClosed {
-					delete(graph.Nodes, id)
+				switch status {
+				case "all":
+				case "":
+					if n.Status == domain.StatusClosed {
+						delete(graph.Nodes, id)
+					}
+				default:
+					if string(n.Status) != status {
+						delete(graph.Nodes, id)
+					}
 				}
 			}
 			filtered := make([]domain.Edge, 0, len(graph.Edges))
@@ -182,6 +192,8 @@ func newDepGraphCmd() *cobra.Command {
 			return enc.Encode(jsonGraph{Nodes: nodes, Edges: edges})
 		},
 	}
+
+	cmd.Flags().StringVar(&status, "status", "", `Filter by status (open, in_progress, closed, all) (default excludes closed)`)
 
 	return cmd
 }
