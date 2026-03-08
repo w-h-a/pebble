@@ -619,8 +619,8 @@ func (s *Service) RemoveDependency(ctx context.Context, blockerIDOrPrefix, block
 	return blockerID, blockedID, changed, nil
 }
 
-func (s *Service) BuildGraph(ctx context.Context, id *string) (domain.Graph, error) {
-	slog.Debug("building graph", "scoped", id != nil)
+func (s *Service) BuildGraph(ctx context.Context, id *string, status string) (domain.Graph, error) {
+	slog.Debug("building graph", "scoped", id != nil, "status", status)
 
 	deps, err := s.repo.GetDependencyGraph(ctx)
 	if err != nil {
@@ -653,7 +653,9 @@ func (s *Service) BuildGraph(ctx context.Context, id *string) (domain.Graph, err
 		graph = graph.Subgraph(resolvedID)
 	}
 
-	slog.Debug("graph built", "node_count", len(graph.Nodes), "edge_count", len(graph.Edges), "scoped", id != nil)
+	graph = graph.FilterByStatus(status)
+
+	slog.Debug("graph built", "node_count", len(graph.Nodes), "edge_count", len(graph.Edges), "scoped", id != nil, "status", status)
 
 	return graph, nil
 }
