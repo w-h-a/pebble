@@ -8,6 +8,7 @@ import (
 )
 
 type Repo interface {
+	ExportIssues(ctx context.Context, filter domain.ExportFilter) ([]domain.Issue, error)
 	CreateIssue(ctx context.Context, issue *domain.Issue) error
 	IssueExists(ctx context.Context, id string) (bool, error)
 	ResolveID(ctx context.Context, partial string) (string, error)
@@ -19,7 +20,6 @@ type Repo interface {
 	ReopenIssue(ctx context.Context, id string, now time.Time) error
 	ReadyIssues(ctx context.Context, sort string, limit int) ([]domain.Issue, error)
 	UpcomingIssues(ctx context.Context, now time.Time, days int, assignee string) ([]domain.Issue, error)
-	ExportIssues(ctx context.Context, filter domain.ExportFilter) ([]domain.Issue, error)
 
 	GetLabels(ctx context.Context, issueID string) ([]string, error)
 

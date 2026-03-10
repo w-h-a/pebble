@@ -7,8 +7,9 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+	noopexporter "github.com/w-h-a/bees/internal/client/exporter/noop"
 	"github.com/w-h-a/bees/internal/client/importer/beads"
-	"github.com/w-h-a/bees/internal/client/importer/noop"
+	noopimporter "github.com/w-h-a/bees/internal/client/importer/noop"
 	"github.com/w-h-a/bees/internal/client/repo"
 	"github.com/w-h-a/bees/internal/client/repo/sqlite"
 	"github.com/w-h-a/bees/internal/service"
@@ -100,7 +101,7 @@ func newRootCmd() *cobra.Command {
 			}
 			dbCloser = r.Close
 
-			i, _ := noop.NewImporter()
+			i, _ := noopimporter.NewImporter()
 			if cmd.CommandPath() == "bees import" {
 				i, err = beads.NewImporter()
 				if err != nil {
@@ -108,7 +109,9 @@ func newRootCmd() *cobra.Command {
 				}
 			}
 
-			svc = service.NewService(r, i, prefix)
+			e, _ := noopexporter.NewExporter()
+
+			svc = service.NewService(r, i, e, prefix)
 
 			return nil
 		},
