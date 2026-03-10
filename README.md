@@ -40,7 +40,7 @@ bees close <id>                      bees dep remove <id> <id>
 bees reopen <id>                     bees dep graph [<id>]
 bees list [--status --type ...]      bees comment <id> "text"
 bees import <file.jsonl>             bees config set|get|list
-bees export                          bees version
+bees export [-o file.jsonl]          bees version
 ```
 
 ## Architecture
