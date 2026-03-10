@@ -438,6 +438,146 @@ func TestListIssues_PopulatesRelations(t *testing.T) {
 	require.Equal(t, "test comment", got.Comments[0].Body)
 }
 
+func TestListIssues_ParentFilterFromEpic(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	epicID, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Epic", Type: domain.TypeEpic})
+	require.NoError(t, err)
+
+	_, err = svc.CreateIssue(ctx, &domain.Issue{Title: "Direct child 1", ParentID: &epicID})
+	require.NoError(t, err)
+
+	_, err = svc.CreateIssue(ctx, &domain.Issue{Title: "Direct child 2", ParentID: &epicID})
+	require.NoError(t, err)
+
+	choreID, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Grouping chore", Type: domain.TypeChore, ParentID: &epicID})
+	require.NoError(t, err)
+
+	_, err = svc.CreateIssue(ctx, &domain.Issue{Title: "Sub-task 1", ParentID: &choreID})
+	require.NoError(t, err)
+
+	_, err = svc.CreateIssue(ctx, &domain.Issue{Title: "Sub-task 2", ParentID: &choreID})
+	require.NoError(t, err)
+
+	_, err = svc.CreateIssue(ctx, &domain.Issue{Title: "Unrelated"})
+	require.NoError(t, err)
+
+	// Act
+	issues, err := svc.ListIssues(ctx, domain.ListFilter{Parent: epicID})
+	require.NoError(t, err)
+
+	// Assert: all 5 descendants, not the epic itself, not unrelated
+	require.Len(t, issues, 5)
+	titles := map[string]bool{}
+	for _, iss := range issues {
+		titles[iss.Title] = true
+	}
+	require.True(t, titles["Direct child 1"])
+	require.True(t, titles["Direct child 2"])
+	require.True(t, titles["Grouping chore"])
+	require.True(t, titles["Sub-task 1"])
+	require.True(t, titles["Sub-task 2"])
+	require.False(t, titles["Epic"])
+	require.False(t, titles["Unrelated"])
+}
+
+func TestListIssues_ParentFilterFromMiddleNode(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	epicID, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Epic", Type: domain.TypeEpic})
+	require.NoError(t, err)
+
+	_, err = svc.CreateIssue(ctx, &domain.Issue{Title: "Direct child", ParentID: &epicID})
+	require.NoError(t, err)
+
+	choreID, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Grouping chore", Type: domain.TypeChore, ParentID: &epicID})
+	require.NoError(t, err)
+
+	_, err = svc.CreateIssue(ctx, &domain.Issue{Title: "Sub-task 1", ParentID: &choreID})
+	require.NoError(t, err)
+
+	_, err = svc.CreateIssue(ctx, &domain.Issue{Title: "Sub-task 2", ParentID: &choreID})
+	require.NoError(t, err)
+
+	// Act
+	issues, err := svc.ListIssues(ctx, domain.ListFilter{Parent: choreID})
+	require.NoError(t, err)
+
+	// Assert: only the 2 sub-tasks
+	require.Len(t, issues, 2)
+	titles := map[string]bool{}
+	for _, iss := range issues {
+		titles[iss.Title] = true
+	}
+	require.True(t, titles["Sub-task 1"])
+	require.True(t, titles["Sub-task 2"])
+}
+
+func TestListIssues_ParentFilterComposesWithStatus(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	epicID, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Epic", Type: domain.TypeEpic})
+	require.NoError(t, err)
+
+	openChildID, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Open child", ParentID: &epicID})
+	require.NoError(t, err)
+
+	closedChildID, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Closed child", ParentID: &epicID})
+	require.NoError(t, err)
+
+	_, _, err = svc.CloseIssue(ctx, closedChildID)
+	require.NoError(t, err)
+
+	// Act: default status is "open"
+	issues, err := svc.ListIssues(ctx, domain.ListFilter{Parent: epicID})
+	require.NoError(t, err)
+
+	// Assert: only the open child
+	require.Len(t, issues, 1)
+	require.Equal(t, openChildID, issues[0].ID)
+}
+
+func TestListIssues_EmptyParentPreservesExistingBehavior(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	_, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Task A"})
+	require.NoError(t, err)
+
+	_, err = svc.CreateIssue(ctx, &domain.Issue{Title: "Task B"})
+	require.NoError(t, err)
+
+	// Act: no parent filter
+	issues, err := svc.ListIssues(ctx, domain.ListFilter{})
+	require.NoError(t, err)
+
+	// Assert: both returned
+	require.Len(t, issues, 2)
+}
+
 func TestSearchIssues_ByTitle(t *testing.T) {
 	if os.Getenv("INTEGRATION") == "" {
 		t.Skip("set INTEGRATION=1 to run")

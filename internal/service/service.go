@@ -253,11 +253,22 @@ func (s *Service) ListIssues(ctx context.Context, filter domain.ListFilter) ([]d
 		filter.Limit = 50
 	}
 
+	var parentID string
+	if filter.Parent != "" {
+		resolved, err := s.repo.ResolveID(ctx, filter.Parent)
+		if err != nil {
+			return nil, fmt.Errorf("parent issue %q not found: %w", filter.Parent, err)
+		}
+		parentID = resolved
+		filter.Parent = ""
+	}
+
 	slog.Debug("listing issues",
 		"status", filter.Status,
 		"type", filter.Type,
 		"assignee", filter.Assignee,
 		"label", filter.Label,
+		"parent", parentID,
 		"sort", filter.Sort,
 		"limit", filter.Limit,
 	)
@@ -265,6 +276,11 @@ func (s *Service) ListIssues(ctx context.Context, filter domain.ListFilter) ([]d
 	issues, err := s.repo.ListIssues(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list issues: %w", err)
+	}
+
+	if parentID != "" {
+		issues = domain.Descendants(issues, parentID)
+		slog.Debug("parent filter applied", "parent", parentID, "descendant_count", len(issues))
 	}
 
 	if err := s.populateRelations(ctx, issues); err != nil {
