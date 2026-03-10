@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+	"github.com/w-h-a/bees/internal/client/exporter/jsonl"
 	noopexporter "github.com/w-h-a/bees/internal/client/exporter/noop"
 	"github.com/w-h-a/bees/internal/client/importer/beads"
 	noopimporter "github.com/w-h-a/bees/internal/client/importer/noop"
@@ -75,6 +76,8 @@ func newRootCmd() *cobra.Command {
 			slog.Debug("command path", "path", cmd.CommandPath(), "name", cmd.Name())
 
 			needsDB := map[string]bool{
+				"bees import":     true,
+				"bees export":     true,
 				"bees create":     true,
 				"bees show":       true,
 				"bees list":       true,
@@ -88,7 +91,6 @@ func newRootCmd() *cobra.Command {
 				"bees dep remove": true,
 				"bees dep graph":  true,
 				"bees comment":    true,
-				"bees import":     true,
 			}
 			if !needsDB[cmd.CommandPath()] {
 				return nil
@@ -110,6 +112,12 @@ func newRootCmd() *cobra.Command {
 			}
 
 			e, _ := noopexporter.NewExporter()
+			if cmd.CommandPath() == "bees export" {
+				e, err = jsonl.NewExporter()
+				if err != nil {
+					return fmt.Errorf("failed to initialize exporter: %w", err)
+				}
+			}
 
 			svc = service.NewService(r, i, e, prefix)
 
@@ -128,6 +136,7 @@ func newRootCmd() *cobra.Command {
 
 	cmd.AddCommand(newInitCmd())
 	cmd.AddCommand(newImportCmd())
+	cmd.AddCommand(newExportCmd())
 	cmd.AddCommand(newCreateCmd())
 	cmd.AddCommand(newShowCmd())
 	cmd.AddCommand(newListCmd())
