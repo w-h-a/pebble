@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/w-h-a/bees/internal/client/exporter"
 	"github.com/w-h-a/bees/internal/client/importer"
 	"github.com/w-h-a/bees/internal/client/repo"
 	"github.com/w-h-a/bees/internal/domain"
@@ -22,6 +23,7 @@ const (
 type Service struct {
 	repo   repo.Repo
 	imp    importer.Importer
+	exp    exporter.Exporter
 	prefix string
 }
 
@@ -120,6 +122,31 @@ func (s *Service) ImportIssues(ctx context.Context, r io.Reader) (ImportResult, 
 	)
 
 	return result, nil
+}
+
+func (s *Service) ExportIssues(ctx context.Context, w io.Writer, filter domain.ExportFilter) error {
+	slog.Debug("exporting issues", "status", filter.Status, "type", filter.Type, "assignee", filter.Assignee, "label", filter.Label)
+
+	issues, err := s.repo.ExportIssues(ctx, filter)
+	if err != nil {
+		return fmt.Errorf("failed to export issues: %w", err)
+	}
+
+	if err := s.populateRelations(ctx, issues); err != nil {
+		return err
+	}
+
+	for _, issue := range issues {
+		slog.Debug("exporting issue", "id", issue.ID, "labels", len(issue.Labels), "deps", len(issue.Dependencies), "comments", len(issue.Comments))
+	}
+
+	if err := s.exp.Write(w, issues); err != nil {
+		return fmt.Errorf("failed to write export: %w", err)
+	}
+
+	slog.Debug("export complete", "count", len(issues))
+
+	return nil
 }
 
 func (s *Service) CreateIssue(ctx context.Context, issue *domain.Issue) (string, error) {
@@ -730,10 +757,11 @@ func (s *Service) populateRelations(ctx context.Context, issues []domain.Issue) 
 	return nil
 }
 
-func NewService(repo repo.Repo, imp importer.Importer, prefix string) *Service {
+func NewService(repo repo.Repo, imp importer.Importer, exp exporter.Exporter, prefix string) *Service {
 	return &Service{
 		repo:   repo,
 		imp:    imp,
+		exp:    exp,
 		prefix: prefix,
 	}
 }

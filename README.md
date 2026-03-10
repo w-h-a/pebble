@@ -40,7 +40,7 @@ bees close <id>                      bees dep remove <id> <id>
 bees reopen <id>                     bees dep graph [<id>]
 bees list [--status --type ...]      bees comment <id> "text"
 bees import <file.jsonl>             bees config set|get|list
-bees export (coming soon)            bees version
+bees export                          bees version
 ```
 
 ## Architecture
@@ -60,12 +60,14 @@ graph TD
   subgraph Client ["Client Layer"]
     REPO_IF[Repo Interface]
     IMP_IF[Importer Interface]
+    EXP_IF[Exporter Interface]
   end
 
   subgraph Infra ["Infrastructure"]
     SQLITE[SQLite via modernc.org/sqlite]
     DB[(bees.db)]
     BEADS[Beads JSONL Parser]
+    JSONW[JSONL Writer]
     JSONL[(.jsonl file)]
   end
 
@@ -79,10 +81,13 @@ graph TD
   SVC --> Domain
   SVC --> REPO_IF
   SVC --> IMP_IF
+  SVC --> EXP_IF
   REPO_IF -.-> SQLITE
   SQLITE --> DB
   IMP_IF -.-> BEADS
   BEADS --> JSONL
+  EXP_IF -.-> JSONW
+  JSONW --> JSONL
 ```
 
 ### ER Diagram

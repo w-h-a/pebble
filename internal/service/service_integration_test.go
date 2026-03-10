@@ -8,7 +8,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/w-h-a/bees/internal/client/importer/noop"
+	noopexporter "github.com/w-h-a/bees/internal/client/exporter/noop"
+	noopimporter "github.com/w-h-a/bees/internal/client/importer/noop"
 	"github.com/w-h-a/bees/internal/client/repo"
 	"github.com/w-h-a/bees/internal/client/repo/sqlite"
 	"github.com/w-h-a/bees/internal/domain"
@@ -1826,10 +1827,13 @@ func setupService(t *testing.T) *Service {
 	r, err := sqlite.NewRepo(repo.WithLocation(dbPath))
 	require.NoError(t, err)
 
-	i, err := noop.NewImporter()
+	i, err := noopimporter.NewImporter()
+	require.NoError(t, err)
+
+	e, err := noopexporter.NewExporter()
 	require.NoError(t, err)
 
 	t.Cleanup(func() { r.Close() })
 
-	return NewService(r, i, "test")
+	return NewService(r, i, e, "test")
 }
