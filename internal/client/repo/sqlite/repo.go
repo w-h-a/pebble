@@ -455,6 +455,66 @@ func (r *sqliteRepo) UpcomingIssues(ctx context.Context, now time.Time, days int
 	return issues, rows.Err()
 }
 
+func (r *sqliteRepo) ExportIssues(ctx context.Context, filter domain.ExportFilter) ([]domain.Issue, error) {
+	query := "SELECT id, title, description, status, type, priority, assignee, estimate_mins, defer_until, due_at, created_at, updated_at, closed_at, parent_id FROM issues WHERE 1=1"
+	var args []any
+
+	if filter.Status != "" && filter.Status != "all" {
+		query += " AND status = ?"
+		args = append(args, filter.Status)
+	}
+
+	if filter.Type != "" {
+		query += " AND type = ?"
+		args = append(args, filter.Type)
+	}
+
+	if filter.Assignee != "" {
+		query += " AND assignee = ?"
+		args = append(args, filter.Assignee)
+	}
+
+	if filter.Label != "" {
+		query += " AND EXISTS (SELECT 1 FROM labels l WHERE l.issue_id = issues.id AND l.label = ?)"
+		args = append(args, filter.Label)
+	}
+
+	slog.Debug("export issues", "query", query, "args", args)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to export issues: %w", err)
+	}
+	defer rows.Close()
+
+	var issues []domain.Issue
+
+	for rows.Next() {
+		var issue domain.Issue
+		if err := rows.Scan(
+			&issue.ID,
+			&issue.Title,
+			&issue.Description,
+			&issue.Status,
+			&issue.Type,
+			&issue.Priority,
+			&issue.Assignee,
+			&issue.EstimateMins,
+			&issue.DeferUntil,
+			&issue.DueAt,
+			&issue.CreatedAt,
+			&issue.UpdatedAt,
+			&issue.ClosedAt,
+			&issue.ParentID,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan issue: %w", err)
+		}
+		issues = append(issues, issue)
+	}
+
+	return issues, rows.Err()
+}
+
 func (r *sqliteRepo) GetLabels(ctx context.Context, issueID string) ([]string, error) {
 	rows, err := r.db.QueryContext(ctx, "SELECT label FROM labels WHERE issue_id = ? ORDER BY label", issueID)
 	if err != nil {
