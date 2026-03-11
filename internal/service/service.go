@@ -170,13 +170,17 @@ func (s *Service) CreateIssue(ctx context.Context, issue *domain.Issue) (string,
 		issue.Labels = filtered
 	}
 
-	if issue.ParentID != nil && *issue.ParentID != "" {
-		resolvedParent, err := s.repo.ResolveID(ctx, *issue.ParentID)
-		if err != nil {
-			slog.Debug("parent validation failed", "attempted_parent", *issue.ParentID, "error", err)
-			return "", fmt.Errorf("parent issue %q not found", *issue.ParentID)
+	if issue.ParentID != nil {
+		if *issue.ParentID != "" {
+			resolvedParent, err := s.repo.ResolveID(ctx, *issue.ParentID)
+			if err != nil {
+				slog.Debug("parent validation failed", "attempted_parent", *issue.ParentID, "error", err)
+				return "", fmt.Errorf("parent issue %q not found", *issue.ParentID)
+			}
+			issue.ParentID = &resolvedParent
+		} else {
+			issue.ParentID = nil
 		}
-		issue.ParentID = &resolvedParent
 	}
 
 	slog.Debug("creating issue", "title", issue.Title, "type", string(issue.Type), "priority", *issue.Priority, "label_count", len(issue.Labels))
@@ -385,7 +389,7 @@ func (s *Service) UpdateIssue(ctx context.Context, idOrPrefix string, update dom
 			}
 			issue.ParentID = &resolvedParent
 		} else {
-			issue.ParentID = update.ParentID
+			issue.ParentID = nil
 		}
 		changed = append(changed, "parent_id")
 	}

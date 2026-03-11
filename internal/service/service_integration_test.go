@@ -309,6 +309,29 @@ func TestCreateIssue_AcceptsValidParent(t *testing.T) {
 	require.Equal(t, parentID, *got.ParentID)
 }
 
+func TestCreateIssue_EmptyParentStringTreatedAsNil(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	// Act
+	empty := ""
+	id, err := svc.CreateIssue(ctx, &domain.Issue{
+		Title:    "Issue with empty parent",
+		ParentID: &empty,
+	})
+	require.NoError(t, err)
+
+	// Assert
+	got, err := svc.GetIssue(ctx, id)
+	require.NoError(t, err)
+	require.Nil(t, got.ParentID)
+}
+
 func TestListIssues_DefaultsToOpen(t *testing.T) {
 	if os.Getenv("INTEGRATION") == "" {
 		t.Skip("set INTEGRATION=1 to run")
@@ -990,6 +1013,35 @@ func TestUpdateIssue_AcceptsValidParent(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, got.ParentID)
 	require.Equal(t, parentID, *got.ParentID)
+}
+
+func TestUpdateIssue_ClearsParent(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	parentID, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Parent"})
+	require.NoError(t, err)
+
+	childID, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Child", ParentID: &parentID})
+	require.NoError(t, err)
+
+	// Act
+	empty := ""
+	updated, err := svc.UpdateIssue(ctx, childID, domain.IssueUpdate{ParentID: &empty})
+	require.NoError(t, err)
+
+	// Assert
+	require.Nil(t, updated.ParentID)
+
+	// Assert: persisted
+	got, err := svc.GetIssue(ctx, childID)
+	require.NoError(t, err)
+	require.Nil(t, got.ParentID)
 }
 
 func TestCloseIssue(t *testing.T) {
