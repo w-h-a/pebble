@@ -416,6 +416,66 @@ func (r *sqliteRepo) ReopenIssue(ctx context.Context, id string, now time.Time) 
 	return nil
 }
 
+func (r *sqliteRepo) ListDeleteCandidates(ctx context.Context, filter domain.DeleteFilter) ([]domain.Issue, error) {
+	query := `SELECT id, title, description, status, type, priority, assignee, estimate_mins, defer_until, due_at, created_at, updated_at, closed_at, parent_id
+	FROM issues
+	WHERE status = 'closed' AND closed_at <= ?`
+
+	slog.Debug("list delete candidates", "closed_before", filter.ClosedBefore)
+
+	rows, err := r.db.QueryContext(ctx, query, filter.ClosedBefore)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list delete candidates: %w", err)
+	}
+	defer rows.Close()
+
+	var issues []domain.Issue
+	for rows.Next() {
+		var issue domain.Issue
+		if err := rows.Scan(
+			&issue.ID,
+			&issue.Title,
+			&issue.Description,
+			&issue.Status,
+			&issue.Type,
+			&issue.Priority,
+			&issue.Assignee,
+			&issue.EstimateMins,
+			&issue.DeferUntil,
+			&issue.DueAt,
+			&issue.CreatedAt,
+			&issue.UpdatedAt,
+			&issue.ClosedAt,
+			&issue.ParentID,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan delete candidate: %w", err)
+		}
+		issues = append(issues, issue)
+	}
+
+	return issues, rows.Err()
+}
+
+func (r *sqliteRepo) DeleteIssues(ctx context.Context, filter domain.DeleteFilter) (int, error) {
+	slog.Debug("delete issues", "closed_before", filter.ClosedBefore)
+
+	result, err := r.db.ExecContext(
+		ctx,
+		"DELETE FROM issues WHERE status = 'closed' AND closed_at <= ?",
+		filter.ClosedBefore,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("failed to delete issues: %w", err)
+	}
+
+	n, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("failed to check rows affected: %w", err)
+	}
+
+	return int(n), nil
+}
+
 func (r *sqliteRepo) ReadyIssues(ctx context.Context, sort string, limit int) ([]domain.Issue, error) {
 	query := "SELECT id, title, description, status, type, priority, assignee, estimate_mins, defer_until, due_at, created_at, updated_at, closed_at, parent_id FROM ready_issues"
 

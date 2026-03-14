@@ -18,6 +18,8 @@ type Repo interface {
 	UpdateIssue(ctx context.Context, issue *domain.Issue) error
 	CloseIssue(ctx context.Context, id string, now time.Time) error
 	ReopenIssue(ctx context.Context, id string, now time.Time) error
+	ListDeleteCandidates(ctx context.Context, filter domain.DeleteFilter) ([]domain.Issue, error)
+	DeleteIssues(ctx context.Context, filter domain.DeleteFilter) (int, error)
 	ReadyIssues(ctx context.Context, sort string, limit int) ([]domain.Issue, error)
 	UpcomingIssues(ctx context.Context, now time.Time, days int, assignee string) ([]domain.Issue, error)
 
