@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"errors"
 	"time"
 
 	"github.com/w-h-a/bees/internal/util/dfs"
@@ -80,6 +81,14 @@ type ListFilter struct {
 	Parent   string
 	Sort     string
 	Limit    int
+	Since    *time.Time
+}
+
+func (f ListFilter) Validate() error {
+	if f.Since != nil && f.Status != string(StatusClosed) {
+		return errors.New("filtering by 'since' is only supported when status is 'closed'")
+	}
+	return nil
 }
 
 type ExportFilter struct {

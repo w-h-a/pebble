@@ -166,3 +166,66 @@ func TestDescendants_FlatList(t *testing.T) {
 	// Assert
 	require.Empty(t, got)
 }
+
+func TestListFilterValidate_SinceWithClosed(t *testing.T) {
+	if len(os.Getenv("INTEGRATION")) > 0 {
+		t.Skip()
+	}
+
+	// Arrange
+	since := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	f := ListFilter{Since: &since, Status: string(StatusClosed)}
+
+	// Act
+	err := f.Validate()
+
+	// Assert
+	require.NoError(t, err)
+}
+
+func TestListFilterValidate_SinceWithOpen(t *testing.T) {
+	if len(os.Getenv("INTEGRATION")) > 0 {
+		t.Skip()
+	}
+
+	// Arrange
+	since := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	f := ListFilter{Since: &since, Status: string(StatusOpen)}
+
+	// Act
+	err := f.Validate()
+
+	// Assert
+	require.EqualError(t, err, "filtering by 'since' is only supported when status is 'closed'")
+}
+
+func TestListFilterValidate_SinceWithEmptyStatus(t *testing.T) {
+	if len(os.Getenv("INTEGRATION")) > 0 {
+		t.Skip()
+	}
+
+	// Arrange
+	since := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	f := ListFilter{Since: &since}
+
+	// Act
+	err := f.Validate()
+
+	// Assert
+	require.EqualError(t, err, "filtering by 'since' is only supported when status is 'closed'")
+}
+
+func TestListFilterValidate_NilSince(t *testing.T) {
+	if len(os.Getenv("INTEGRATION")) > 0 {
+		t.Skip()
+	}
+
+	// Arrange
+	f := ListFilter{}
+
+	// Act
+	err := f.Validate()
+
+	// Assert
+	require.NoError(t, err)
+}
