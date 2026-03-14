@@ -230,6 +230,11 @@ func (r *sqliteRepo) ListIssues(ctx context.Context, filter domain.ListFilter) (
 		args = append(args, filter.Label)
 	}
 
+	if filter.Since != nil {
+		query += " AND closed_at >= ?"
+		args = append(args, *filter.Since)
+	}
+
 	switch filter.Sort {
 	case "created":
 		query += " ORDER BY created_at DESC"
