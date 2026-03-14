@@ -270,6 +270,10 @@ func (s *Service) ListIssues(ctx context.Context, filter domain.ListFilter) ([]d
 		filter.Limit = 50
 	}
 
+	if err := filter.Validate(); err != nil {
+		return nil, err
+	}
+
 	var parentID string
 	if filter.Parent != "" {
 		resolved, err := s.repo.ResolveID(ctx, filter.Parent)

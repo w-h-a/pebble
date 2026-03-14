@@ -602,6 +602,61 @@ func TestListIssues_EmptyParentPreservesExistingBehavior(t *testing.T) {
 	require.Len(t, issues, 2)
 }
 
+func TestListIssues_SinceWithClosedStatus(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	id1, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Recently closed 1"})
+	require.NoError(t, err)
+
+	id2, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Recently closed 2"})
+	require.NoError(t, err)
+
+	_, _, err = svc.CloseIssue(ctx, id1)
+	require.NoError(t, err)
+
+	_, _, err = svc.CloseIssue(ctx, id2)
+	require.NoError(t, err)
+
+	since := time.Now().Add(-1 * time.Minute)
+
+	// Act
+	issues, err := svc.ListIssues(ctx, domain.ListFilter{
+		Status: "closed",
+		Since:  &since,
+	})
+	require.NoError(t, err)
+
+	// Assert: both recently-closed issues returned
+	require.Len(t, issues, 2)
+}
+
+func TestListIssues_SinceWithDefaultStatusReturnsError(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	since := time.Now().Add(-1 * time.Hour)
+
+	// Act: Since set, but Status left empty (defaults to "open")
+	_, err := svc.ListIssues(ctx, domain.ListFilter{
+		Since: &since,
+	})
+
+	// Assert
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "since")
+}
+
 func TestSearchIssues_ByTitle(t *testing.T) {
 	if os.Getenv("INTEGRATION") == "" {
 		t.Skip("set INTEGRATION=1 to run")
