@@ -548,6 +548,40 @@ func (s *Service) ReopenIssue(ctx context.Context, idOrPrefix string) (*domain.I
 	return issue, changed, nil
 }
 
+func (s *Service) PreviewDeleteIssues(ctx context.Context, filter domain.DeleteFilter) ([]domain.Issue, error) {
+	if err := filter.Validate(); err != nil {
+		return nil, err
+	}
+
+	slog.Debug("previewing delete candidates", "closed_before", filter.ClosedBefore)
+
+	issues, err := s.repo.ListDeleteCandidates(ctx, filter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list delete candidates: %w", err)
+	}
+
+	slog.Debug("delete candidates found", "count", len(issues))
+
+	return issues, nil
+}
+
+func (s *Service) DeleteIssues(ctx context.Context, filter domain.DeleteFilter) (int, error) {
+	if err := filter.Validate(); err != nil {
+		return 0, err
+	}
+
+	slog.Debug("deleting issues", "closed_before", filter.ClosedBefore)
+
+	count, err := s.repo.DeleteIssues(ctx, filter)
+	if err != nil {
+		return 0, fmt.Errorf("failed to delete issues: %w", err)
+	}
+
+	slog.Info("issues deleted", "count", count, "closed_before", filter.ClosedBefore)
+
+	return count, nil
+}
+
 func (s *Service) ReadyIssues(ctx context.Context, sort string, limit int) ([]domain.Issue, error) {
 	if sort == "" {
 		sort = "priority"

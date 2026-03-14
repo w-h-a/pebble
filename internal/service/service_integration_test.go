@@ -1208,6 +1208,160 @@ func TestReopenIssue_AlreadyOpen(t *testing.T) {
 	require.Equal(t, domain.StatusOpen, got.Status)
 }
 
+func TestPreviewDeleteIssues_ReturnsCorrectCandidates(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	oldID, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Old closed"})
+	require.NoError(t, err)
+
+	_, _, err = svc.CloseIssue(ctx, oldID)
+	require.NoError(t, err)
+
+	recentID, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Recent closed"})
+	require.NoError(t, err)
+
+	_, _, err = svc.CloseIssue(ctx, recentID)
+	require.NoError(t, err)
+
+	_, err = svc.CreateIssue(ctx, &domain.Issue{Title: "Still open"})
+	require.NoError(t, err)
+
+	cutoff := time.Now().Add(1 * time.Second)
+
+	// Act
+	candidates, err := svc.PreviewDeleteIssues(ctx, domain.DeleteFilter{
+		ClosedBefore: cutoff,
+	})
+	require.NoError(t, err)
+
+	// Assert: both closed issues, not the open one
+	require.Len(t, candidates, 2)
+	ids := map[string]bool{}
+	for _, c := range candidates {
+		ids[c.ID] = true
+	}
+	require.True(t, ids[oldID])
+	require.True(t, ids[recentID])
+}
+
+func TestPreviewDeleteIssues_ZeroFilterReturnsValidationError(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	// Act
+	_, err := svc.PreviewDeleteIssues(ctx, domain.DeleteFilter{})
+
+	// Assert
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "closed-before")
+}
+
+func TestDeleteIssues_RemovesMatchingAndCascades(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	issueID, err := svc.CreateIssue(ctx, &domain.Issue{
+		Title:  "To delete",
+		Labels: []string{"cleanup"},
+	})
+	require.NoError(t, err)
+
+	_, err = svc.AddComment(ctx, issueID, "wes", "will be cascaded")
+	require.NoError(t, err)
+
+	_, _, err = svc.CloseIssue(ctx, issueID)
+	require.NoError(t, err)
+
+	survivorID, err := svc.CreateIssue(ctx, &domain.Issue{Title: "Survivor"})
+	require.NoError(t, err)
+
+	cutoff := time.Now().Add(1 * time.Second)
+
+	// Act
+	count, err := svc.DeleteIssues(ctx, domain.DeleteFilter{
+		ClosedBefore: cutoff,
+	})
+	require.NoError(t, err)
+
+	// Assert: one issue deleted
+	require.Equal(t, 1, count)
+
+	// Assert: deleted issue is gone
+	_, err = svc.GetIssue(ctx, issueID)
+	require.Error(t, err)
+
+	// Assert: survivor untouched
+	got, err := svc.GetIssue(ctx, survivorID)
+	require.NoError(t, err)
+	require.Equal(t, "Survivor", got.Title)
+}
+
+func TestDeleteIssues_ZeroFilterReturnsValidationError(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	// Act
+	_, err := svc.DeleteIssues(ctx, domain.DeleteFilter{})
+
+	// Assert
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "closed-before")
+}
+
+func TestPreviewThenDelete_ConsistentCounts(t *testing.T) {
+	if os.Getenv("INTEGRATION") == "" {
+		t.Skip("set INTEGRATION=1 to run")
+	}
+
+	// Arrange
+	svc := setupService(t)
+	ctx := context.Background()
+
+	for _, title := range []string{"A", "B", "C"} {
+		id, err := svc.CreateIssue(ctx, &domain.Issue{Title: title})
+		require.NoError(t, err)
+
+		_, _, err = svc.CloseIssue(ctx, id)
+		require.NoError(t, err)
+	}
+
+	cutoff := time.Now().Add(1 * time.Second)
+	filter := domain.DeleteFilter{ClosedBefore: cutoff}
+
+	// Act: preview
+	candidates, err := svc.PreviewDeleteIssues(ctx, filter)
+	require.NoError(t, err)
+
+	// Act: delete
+	count, err := svc.DeleteIssues(ctx, filter)
+	require.NoError(t, err)
+
+	// Assert: preview count matches delete count
+	require.Equal(t, len(candidates), count)
+	require.Equal(t, 3, count)
+}
+
 func TestReadyIssues_ExcludesDeferredAndClosed(t *testing.T) {
 	if os.Getenv("INTEGRATION") == "" {
 		t.Skip("set INTEGRATION=1 to run")
