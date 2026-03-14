@@ -91,6 +91,17 @@ func (f ListFilter) Validate() error {
 	return nil
 }
 
+type DeleteFilter struct {
+	ClosedBefore time.Time
+}
+
+func (f DeleteFilter) Validate() error {
+	if f.ClosedBefore.IsZero() {
+		return errors.New("deleting requires a 'closed-before' filter")
+	}
+	return nil
+}
+
 type ExportFilter struct {
 	Status   string
 	Type     string

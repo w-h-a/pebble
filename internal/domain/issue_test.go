@@ -229,3 +229,33 @@ func TestListFilterValidate_NilSince(t *testing.T) {
 	// Assert
 	require.NoError(t, err)
 }
+
+func TestDeleteFilterValidate_ClosedBeforeSet(t *testing.T) {
+	if len(os.Getenv("INTEGRATION")) > 0 {
+		t.Skip()
+	}
+
+	// Arrange
+	f := DeleteFilter{ClosedBefore: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)}
+
+	// Act
+	err := f.Validate()
+
+	// Assert
+	require.NoError(t, err)
+}
+
+func TestDeleteFilterValidate_ClosedBeforeZero(t *testing.T) {
+	if len(os.Getenv("INTEGRATION")) > 0 {
+		t.Skip()
+	}
+
+	// Arrange
+	f := DeleteFilter{}
+
+	// Act
+	err := f.Validate()
+
+	// Assert
+	require.EqualError(t, err, "deleting requires a 'closed-before' filter")
+}
