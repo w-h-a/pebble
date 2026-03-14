@@ -41,6 +41,7 @@ bees reopen <id>                     bees dep graph [<id>]
 bees list [--status --type ...]      bees comment <id> "text"
 bees import <file.jsonl>             bees config set|get|list
 bees export [-o file.jsonl]          bees version
+bees delete [--closed-before --yes]
 ```
 
 ## Architecture
